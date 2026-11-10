@@ -1,23 +1,31 @@
 # SWEET HOME — Green Home
 
-An unofficial, fan-made pixel-art survival horror browser game inspired by the Korean series *Sweet Home*. This is an original prototype and is not affiliated with Netflix or the series' rights holders.
+An unofficial, fan-made pixel-art survival horror browser game inspired by the Korean series *Sweet Home*. This original fan project is not affiliated with Netflix or the series' rights holders.
 
-## Features in this prototype
-- Canvas-rendered pixel-art apartment floor and horror atmosphere
-- Keyboard movement, melee combat, enemy pursuit, health and stamina
-- Supplies, first-aid pickup, objective progress and exit condition
-- Start screen, retry screen, pause, responsive website UI
-- Vite build configured for Cloudflare Pages
-- `pixelfx` included as the visual-effects foundation for future combat VFX
+## What is included
+
+- A title screen with New Game, Settings and How to Play; the game never starts automatically.
+- An animated opening sequence with a skip option.
+- Pixel-art top-down survival gameplay with pursuing infected, combat, health, stamina, first aid and three required supplies.
+- A clear chapter-complete condition and separate victory / game-over screens.
+- Synthesized original sound effects and atmospheric audio generated in the browser using the Web Audio API. No external audio files, API keys or audio hosting are needed.
+- Master-volume and mute controls, persisted in the browser.
+- Touch controls for phones and tablets, plus keyboard controls for desktop.
+- Vite build output configured for Cloudflare Pages.
+- The [pixelfx](https://github.com/patch-gg/pixelfx) library retained as the pixel-effects foundation.
 
 ## Controls
-- **WASD / Arrow keys** — Move
-- **Space** — Attack
-- **E** — Pick up nearby items, use first aid when hurt, or interact with the exit
-- **P** — Pause
 
-## Local development
-Requires Node.js 20+.
+| Action | Keyboard | Touch |
+|---|---|---|
+| Move | WASD / arrow keys | Direction pad |
+| Attack | Space | Attack |
+| Interact / collect / use | E | Interact |
+| Pause | P or Escape | — |
+
+## Run locally
+
+Requires Node.js 20 or newer.
 
 ```bash
 npm install
@@ -31,20 +39,29 @@ npm run build
 npm run preview
 ```
 
-## Cloudflare Pages
-Connect this repository to Cloudflare Pages with:
-- **Production branch:** `main`
-- **Build command:** `npm run build`
-- **Build output directory:** `dist`
+Run with the Cloudflare Pages local runtime:
 
-No server-side runtime or environment variables are required for this prototype.
+```bash
+npm run dev:pages
+```
 
-## Next milestones
-1. Integrate selected pixelfx effect modules into combat.
-2. Add room transitions, more floors and enemy variants.
-3. Add sound, dialogue, save slots and story missions.
-4. Improve mobile touch controls and accessibility.
-5. Add original sprite sheets and animated cutscenes.
+## Cloudflare Pages setup
+
+The repository includes `wrangler.jsonc` with the Pages output directory and project name. When creating the Pages project, connect this GitHub repository and choose the **Vite** framework preset. Confirm these values:
+
+- Production branch: `main`
+- Build command: `npm run build`
+- Build output directory: `dist`
+- Root directory: `/`
+
+After the first deployment, pushes to `main` will build and publish automatically. This is a static browser game: it needs no server, database, secrets, environment variables, or separately hosted audio.
+
+Cloudflare's Git setup still requires the one-time framework/build selection during project creation; the checked-in Wrangler config keeps the Pages project name and output directory alongside the code.
+
+## Audio note
+
+All sound is synthesized at runtime. Browsers require a user gesture before audio can start, so sound activates after the player presses a menu button. The settings panel controls master volume and mute state.
 
 ## Credits and rights
-Uses [pixelfx](https://github.com/patch-gg/pixelfx) as an open-source effects library. All game-specific placeholder art is drawn in code. This is a non-commercial fan project; *Sweet Home* and its characters belong to their respective rights holders.
+
+Uses [pixelfx](https://github.com/patch-gg/pixelfx) as an open-source effects library. Game-specific placeholder art and synthesized audio are original code. *Sweet Home*, its story, and its characters belong to their respective rights holders.
