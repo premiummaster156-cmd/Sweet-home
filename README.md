@@ -10,6 +10,9 @@ An unofficial, fan-made pixel-art survival horror browser game inspired by the K
 - A clear chapter-complete condition and separate victory / game-over screens.
 - Synthesized original sound effects and atmospheric audio generated in the browser using the Web Audio API. No external audio files, API keys or audio hosting are needed.
 - Master-volume and mute controls, persisted in the browser.
+- Mobile virtual joystick with dedicated RUN, STEALTH, ATTACK, USE, LIGHT and PAUSE controls.
+- PC controls for sprinting (Shift), crouching (C) and flashlight (F); sprinting drains stamina and makes more noise, while crouching reduces detection range.
+- Flashlight beam and rechargeable battery display, plus stamina-based movement feedback.
 - Touch controls for phones and tablets, plus keyboard controls for desktop.
 - Vite build output configured for Cloudflare Pages.
 - PixelFX-powered animated melee slash effects, composited on a transparent effects layer.
@@ -18,10 +21,13 @@ An unofficial, fan-made pixel-art survival horror browser game inspired by the K
 
 | Action | Keyboard | Touch |
 |---|---|---|
-| Move | WASD / arrow keys | Direction pad |
-| Attack | Space | Attack |
-| Interact / collect / use | E | Interact |
-| Pause | P or Escape | Pause button |
+| Move | WASD / arrow keys | Virtual joystick |
+| Sprint | Hold Shift | Hold RUN |
+| Crouch / stealth | C | STEALTH |
+| Flashlight | F | LIGHT |
+| Attack | Space | ATTACK |
+| Interact / collect / use | E | USE |
+| Pause | P or Escape | PAUSE |
 
 ## Run locally
 
