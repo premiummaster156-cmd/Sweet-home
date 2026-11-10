@@ -8,6 +8,8 @@ const W = canvas.width, H = canvas.height;
 const buffer = createFrame(W, H);
 const image = new ImageData(W, H);
 let running = false, paused = false, last = 0, elapsed = 0, shake = 0;
+let cinematic = true, cinematicTime = 0, cinematicDone = false;
+const snow = Array.from({length:95},(_,i)=>({x:(i*53)%W,y:(i*37)%H,s:1+(i%3===0?1:0),v:12+(i%7)*4,drift:((i%5)-2)*2}));
 let keys = new Set(), fxList = [], particles = [];
 let player, enemies, pickups, doors, blood, objectiveProgress, medkits, gameEnded;
 const ui = {
@@ -17,7 +19,7 @@ const ui = {
   staminaLabel: document.querySelector("#stamina-label"), objective: document.querySelector("#objective"),
   progress: document.querySelector("#mission-progress"), progressText: document.querySelector("#progress-text"),
   medCount: document.querySelector("#med-count"), itemCount: document.querySelector("#item-count"),
-  status: document.querySelector("#status")
+  status: document.querySelector("#status"), cinematic: document.querySelector("#cinematic"), caption: document.querySelector("#cinematic-caption"), skip: document.querySelector("#skip-cinematic"), frame: document.querySelector(".canvas-frame")
 };
 const clamp = (n,a,b) => Math.max(a, Math.min(b,n));
 const rnd = (a,b) => a + Math.random() * (b-a);
@@ -176,13 +178,173 @@ function render(){
   try { clearFrame(buffer); composite(buffer,image.data,[12,14,14]); } catch {}
   ctx.imageSmoothingEnabled=false;
 }
+
+function pixelText(str,x,y,size=8,color="#e9e8df",align="left"){
+  ctx.save();ctx.font=`bold ${size}px monospace`;ctx.textAlign=align;ctx.fillStyle=color;ctx.fillText(str,x,y);ctx.restore();
+}
+function drawSkyline(snowy=true){
+  const sky=snowy?"#111b25":"#303b36";
+  rect(0,0,W,H,sky);
+  if(snowy){
+    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#172633");g.addColorStop(1,"#56636a");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    rect(0,166,W,104,"#c2cbd0");rect(0,182,W,88,"#dbe0df");
+  }else{
+    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#263632");g.addColorStop(1,"#687264");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    rect(0,182,W,88,"#424b3d");
+  }
+  for(let i=0;i<13;i++){
+    const x=i*42-10, bw=22+(i%3)*7, bh=42+(i*19%63);
+    rect(x,146-bh,bw,bh,snowy?"#202c34":"#39413a");
+    for(let wy=153-bh;wy<140;wy+=9)for(let wx=x+4;wx<x+bw-3;wx+=8)
+      rect(wx,wy,3,4,snowy?(i%3===0?"#87949b":"#34444e"):(i%4===0?"#b3a16d":"#536253"));
+    if(snowy)rect(x,146-bh,bw,2,"#a7b2b7");
+  }
+  // road / bridge perspective
+  ctx.fillStyle=snowy?"#8b969d":"#313a34";ctx.beginPath();ctx.moveTo(125,158);ctx.lineTo(354,158);ctx.lineTo(480,270);ctx.lineTo(0,270);ctx.closePath();ctx.fill();
+  rect(0,190,W,3,snowy?"#e6e9e8":"#6d735f");
+  for(let x=25;x<480;x+=58)rect(x,224,20,2,snowy?"#e6e9e8":"#8b8b70");
+  if(snowy){
+    // ruined building silhouette
+    rect(20,82,83,91,"#202a30");rect(28,68,26,22,"#202a30");rect(70,57,33,34,"#202a30");
+    rect(32,99,11,13,"#111a20");rect(58,107,13,16,"#111a20");rect(79,88,10,15,"#111a20");
+    rect(379,90,75,78,"#202a30");rect(394,72,32,24,"#202a30");
+    for(let i=0;i<12;i++)rect(385+(i%4)*15,105+Math.floor(i/4)*18,6,8,"#111a20");
+  } else {
+    // Green Home apartment block and courtyard
+    rect(106,30,268,160,"#555b50");rect(116,38,248,152,"#6b7062");rect(101,27,278,8,"#333a35");
+    for(let y=48;y<164;y+=22)for(let x=125;x<355;x+=27){
+      rect(x,y,17,14,"#303a37");rect(x+2,y+2,13,10,(x+y)%3===0?"#7e8a76":"#4a625a");
+      rect(x+7,y+2,2,10,"#2a3431");
+    }
+    rect(203,151,73,39,"#343b35");rect(211,157,57,33,"#292f2c");rect(233,161,13,29,"#1b2220");
+    rect(0,190,W,80,"#374239");rect(0,208,W,3,"#5a6453");
+    // little lawn and a dangerous lawn mower
+    rect(12,194,76,28,"#46583f");rect(19,200,58,14,"#53664a");
+    rect(41,195,18,7,"#252b28");rect(37,201,27,3,"#202623");rect(42,198,4,3,"#a6a18a");
+  }
+}
+function drawPixelPerson(x,y,kind="soldier",step=0,scale=1){
+  ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(scale,scale);
+  if(kind==="soldier"){
+    rect(-4,0,8,15,"#313d42");rect(-4,-7,8,8,"#9aabaf");rect(-5,-9,10,4,"#2b3539");
+    rect(-3,3,3,8,"#4c5b5d");rect(-4,13,3,5,"#20282c");rect(1,13,3,5,"#20282c");
+    rect(-3,-4,2,2,"#1b2226");rect(2,-4,2,2,"#1b2226");
+    rect(2,2,10,2,"#2c3437");rect(9,0,8,2,"#111719");
+  } else if(kind==="hyun"){
+    rect(-4,0,4,11,"#202a30");rect(1,0,4,11,"#202a30");
+    rect(-5,-12,10,13,"#313c3c");rect(-3,-17,7,7,"#c0a087");
+    rect(-4,-20,9,5,"#171e22");rect(-6,-17,4,5,"#171e22");
+    rect(-5,-11,3,8,"#222c2d");rect(2,-10,3,8,"#222c2d");
+    rect(-3,-8,2,2,"#8e9890");rect(1,-8,2,2,"#8e9890");
+  } else if(kind==="guard"){
+    rect(-4,0,4,11,"#303832");rect(1,0,4,11,"#303832");rect(-5,-11,10,12,"#667362");
+    rect(-3,-17,7,7,"#b28d6c");rect(-4,-19,9,5,"#252a25");rect(-5,-15,3,5,"#252a25");
+    rect(-3,-5,7,2,"#b6b29b");
+  } else if(kind==="ballet"){
+    rect(-1,-4,2,11,"#bfc6c1");rect(-3,-12,6,8,"#d8ded9");rect(-3,-15,6,4,"#c5cec8");
+    rect(-4,-8,8,3,"#d8ded9");rect(-7,-6,5,2,"#d8ded9");rect(2,-6,5,2,"#d8ded9");
+    rect(-5,7,5,2,"#d8ded9");rect(1,7,6,2,"#d8ded9");rect(-2,-18,4,4,"#1d2526");
+  }
+  ctx.restore();
+}
+function drawHelicopter(x,y){
+  rect(x-14,y,28,6,"#202a30");rect(x-7,y-5,14,6,"#303d43");rect(x-3,y-4,7,3,"#9baeb4");
+  rect(x+10,y+2,13,2,"#202a30");rect(x+20,y-1,2,5,"#202a30");
+  rect(x-24,y-7,48,1,"#c0cbd0");rect(x-2,y-10,2,4,"#c0cbd0");
+  rect(x-10,y+6,2,4,"#202a30");rect(x+6,y+6,2,4,"#202a30");
+}
+function drawCinematic(){
+  const t=cinematicTime;
+  // Sequence 1: the snowy bridge, armed units and an impossible figure.
+  if(t<10.5){
+    drawSkyline(true);
+    // Snow particles drift at different depths.
+    for(const flake of snow){const yy=(flake.y+t*flake.v)%H;const xx=(flake.x+Math.sin(t*.8+flake.y)*5+flake.drift*t+W)%W;rect(xx,yy,flake.s,flake.s,"#edf1f0");}
+    // Helicopter sweeps overhead.
+    drawHelicopter(370-t*8,48+Math.sin(t*1.8)*3);
+    // soldiers form a firing line
+    for(let i=0;i<7;i++)drawPixelPerson(120+i*39,197+(i%2)*4,"soldier",t);
+    // figure emerges from ruined buildings and advances through snow
+    const progress=clamp((t-1.2)/8.4,0,1);
+    drawPixelPerson(55+progress*168,187-progress*4,"hyun",t,1.3);
+    // blood on clothes / snow; restrained pixel detail
+    rect(54+progress*168,176-progress*4,3,5,"#7c3439");
+    if(t>6.7 && Math.floor(t*5)%4===0){
+      rect(0,0,W,H,"rgba(230,238,240,.13)");
+      for(let i=0;i<7;i++)rect(120+i*39,187+(i%2)*4,17,2,"#d8dfe0");
+    }
+    if(t<1.2){pixelText("SEPTEMBER 2020",18,25,8,"#dbe2e3");pixelText("UNKNOWN LOCATION",18,38,6,"#aebbc0");}
+    if(t>2.1&&t<6.8){pixelText("UNIDENTIFIED FIGURE APPROACHING",18,25,7,"#e3e7e5");pixelText("VISUAL CONFIRMATION REQUIRED",18,37,6,"#b9c5c7");}
+    if(t>=6.8){pixelText("WARNING · TARGET DOES NOT STOP",W/2,25,7,"#f0c8c2","center");}
+    const fade=t>9.8?clamp((t-9.8)/.7,0,1):0;
+    if(fade){rect(0,0,W,H,`rgba(239,243,242,${fade})`);}
+  // Sequence 2: August, the quiet arrival at Green Home.
+  } else if(t<19.5){
+    drawSkyline(false);
+    // tree leaves sway; distant birds and power lines
+    for(let i=0;i<6;i++){rect(18+i*79,78+Math.sin(t*1.7+i)*2,23,4,"#596d4c");rect(27+i*79,73+Math.sin(t*1.7+i)*2,12,4,"#72815b");}
+    line(0,58,480,72,"#242f2c");line(0,63,480,77,"#242f2c");
+    // The new tenant walks toward the building.
+    const walk=clamp((t-11.3)/6.3,0,1);
+    drawPixelPerson(55+walk*140,220,"hyun",t,1.25);
+    // suitcase and long afternoon shadows
+    rect(44+walk*140,220,10,9,"#292d2c");rect(46+walk*140,222,6,5,"#665c49");rect(49+walk*140,220,2,2,"#a99b7d");
+    rect(0,244,W,26,"#2b352e");
+    for(let x=0;x<480;x+=40)rect(x,244,22,1,"#495447");
+    drawPixelPerson(68,222,"guard",t,.9);
+    if(t<12.4){pixelText("AUGUST 2020",18,25,8,"#e0e4d4");pixelText("SEOUL, SOUTH KOREA",18,38,6,"#b3bcae");}
+    if(t>12.5&&t<18.7){pixelText("GREEN HOME APARTMENTS",W/2,19,7,"#e0e4d4","center");}
+    if(t>18.7)rect(0,0,W,H, "rgba(7,10,9,.35)");
+  // Sequence 3: the isolated room and the rooftop interruption.
+  } else if(t<25.5){
+    rect(0,0,W,H,"#111719");
+    // lonely apartment room, rain-dark window and distant Seoul
+    rect(0,0,480,270,"#18201f");rect(20,22,190,135,"#303a37");rect(26,28,178,123,"#10191d");
+    for(let i=0;i<7;i++){rect(34+i*23,40,2,102,"#263230");}
+    for(let i=0;i<9;i++){rect(30+i*20,61+(i%3)*19,10,3,"#52645d");}
+    rect(0,161,480,109,"#202a28");rect(0,163,480,3,"#414b43");
+    rect(249,176,113,8,"#42453d");rect(258,184,5,45,"#313732");rect(346,184,5,45,"#313732");
+    // Hyun-su sits in shadow; the curtain moves gently.
+    rect(65+Math.sin(t*2)*4,30,9,124,"#45504a");rect(80+Math.sin(t*2)*4,30,7,124,"#303a36");
+    drawPixelPerson(278,207,"hyun",t,1.35);
+    if(t<22.4){pixelText("ROOM 1410",18,20,7,"#c3cbc2");pixelText("A PLACE TO DISAPPEAR",18,32,6,"#85938b");}
+    else{
+      // dissolve into the rooftop skyline and a ballerina practicing alone
+      rect(0,0,W,H,"#1a2528");rect(0,158,W,112,"#20292b");
+      for(let i=0;i<12;i++){const x=i*43;rect(x,83+(i%4)*9,26,90,"#293638");rect(x+6,93+(i%4)*9,5,8,"#5d6b67");}
+      rect(0,203,W,3,"#515d57");rect(0,206,W,64,"#222c2c");
+      drawPixelPerson(225,202,"hyun",t,1.4);
+      drawPixelPerson(285,201,"ballet",t,.95);
+      pixelText("SOMEONE ELSE IS HERE.",W/2,24,7,"#e0e5de","center");
+    }
+  } else {
+    // Final title card before the player enters the game.
+    drawSkyline(false);
+    rect(0,0,W,H,"rgba(5,8,8,.76)");
+    pixelText("AN UNOFFICIAL PIXEL HORROR EXPERIENCE",W/2,93,7,"#b6c0b3","center");
+    pixelText("SWEET HOME",W/2,129,25,"#f0eee2","center");
+    pixelText("CHAPTER 01  /  GREEN HOME",W/2,150,8,"#c26b60","center");
+    pixelText("THE END OF THE WORLD BEGINS AT HOME",W/2,181,7,"#a2aaa0","center");
+  }
+  // cinematic frame texture
+  rect(0,0,W,3,"rgba(0,0,0,.55)");rect(0,H-3,W,3,"rgba(0,0,0,.55)");
+}
+function finishCinematic(){
+  cinematic=false;cinematicDone=true;
+  ui.cinematic.classList.add("hidden");
+  ui.frame.classList.remove("cinematic-mode");
+  ui.intro.classList.remove("hidden");
+}
+
 function frame(now){
   const dt=Math.min((now-last)/1000||0,0.04);last=now;
-  if(running&&!paused)update(dt);
-  render();
+  if(cinematic){cinematicTime+=dt;drawCinematic();if(cinematicTime>28){finishCinematic();}else if(ui.caption){ui.caption.textContent=cinematicTime<10.5?"SEPTEMBER 2020 · UNKNOWN LOCATION":cinematicTime<19.5?"AUGUST 2020 · GREEN HOME":"ROOM 1410 · SEOUL";}}
+  else {if(running&&!paused)update(dt);render();}
   requestAnimationFrame(frame);
 }
 document.querySelector("#start").addEventListener("click",()=>{reset();running=true;paused=false;ui.intro.classList.add("hidden");last=performance.now();});
+ui.skip.addEventListener("click",finishCinematic);
+ui.cinematic.addEventListener("click",e=>{if(e.target===ui.cinematic&&cinematicTime>25)finishCinematic();});
 document.querySelector("#retry").addEventListener("click",()=>{reset();running=true;paused=false;ui.intro.classList.add("hidden");});
 window.addEventListener("keydown",e=>{
   const k=e.key.toLowerCase();
@@ -194,4 +356,4 @@ window.addEventListener("keydown",e=>{
 });
 window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
 window.addEventListener("blur",()=>keys.clear());
-reset();render();requestAnimationFrame(frame);
+reset();ui.frame.classList.add("cinematic-mode");ui.intro.classList.add("hidden");render();requestAnimationFrame(frame);
