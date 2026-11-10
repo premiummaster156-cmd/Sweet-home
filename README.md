@@ -54,8 +54,9 @@ npm run dev:pages
 
 ## Cloudflare Pages setup
 
-The repository includes `wrangler.jsonc` with the Pages output directory and project name. When creating the Pages project, connect this GitHub repository and choose the **Vite** framework preset. Confirm these values:
+The repository includes `wrangler.jsonc` with the Pages output directory and project name. In Cloudflare, create a **Pages** project using **Connect to Git** and select this repository. Because this is plain Vite (not React), use the **None / no framework preset** option and enter these values:
 
+- Project name: `sweet-home`
 - Production branch: `main`
 - Build command: `npm run build`
 - Build output directory: `dist`
@@ -63,7 +64,7 @@ The repository includes `wrangler.jsonc` with the Pages output directory and pro
 
 After the first deployment, pushes to `main` will build and publish automatically. This is a static browser game: it needs no server, database, secrets, environment variables, or separately hosted audio.
 
-Cloudflare's Git setup still requires the one-time framework/build selection during project creation; the checked-in Wrangler config keeps the Pages project name and output directory alongside the code.
+The first connection is the only Cloudflare setup step. Cloudflare installs dependencies, runs the build and publishes `dist`; each later push to `main` automatically redeploys. Node.js 22 is selected by the committed `.nvmrc`. No environment variables or secrets are needed.
 
 ## Audio note
 
