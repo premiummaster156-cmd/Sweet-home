@@ -424,6 +424,11 @@ document.querySelector("#retry").addEventListener("click",()=>{
   ui.gameover.classList.add("hidden");ui.victory.classList.add("hidden");ui.touchControls.classList.remove("hidden");
   audio.scene("game");last=performance.now();
 });
+function togglePause(){
+  if(!running||gameEnded)return;
+  paused=!paused;ui.pause.classList.toggle("hidden",!paused);
+  audio.sfx("menu");audio.scene(paused?"menu":"game");
+}
 function returnToMenu(){
   running=false;paused=false;cinematic=false;keys.clear();
   ui.pause.classList.add("hidden");ui.intro.classList.add("hidden");
@@ -455,10 +460,7 @@ window.addEventListener("keydown",e=>{
   keys.add(k);
   if(k===" "&&!e.repeat)attack();
   if(k==="e"&&!e.repeat)interact();
-  if((k==="p"||k==="escape")&&running&&!gameEnded){
-    paused=!paused;ui.pause.classList.toggle("hidden",!paused);
-    audio.sfx("menu");audio.scene(paused?"menu":"game");
-  }
+  if((k==="p"||k==="escape")&&running&&!gameEnded)togglePause();
 });
 window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
 window.addEventListener("blur",()=>keys.clear());
@@ -470,6 +472,7 @@ document.querySelectorAll("[data-touch-key]").forEach(button=>{
 });
 document.querySelector("#touch-attack").addEventListener("pointerdown",e=>{e.preventDefault();attack();});
 document.querySelector("#touch-interact").addEventListener("pointerdown",e=>{e.preventDefault();interact();});
+document.querySelector("#touch-pause").addEventListener("pointerdown",e=>{e.preventDefault();togglePause();});
 reset();ui.frame.classList.add("cinematic-mode");ui.cinematic.classList.add("hidden");
 ui.intro.classList.add("hidden");ui.menu.classList.remove("hidden");
 render();requestAnimationFrame(frame);
