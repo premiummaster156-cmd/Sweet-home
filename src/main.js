@@ -62,8 +62,7 @@ function circleHitsRect(x,y,r,box){
 }
 function isWorldBlocked(x,y,r){
   if(y-r<76||y+r>245||x-r<9)return true;
-  const exitLane=!!doors?.[0]?.open&&y>112+r&&y<162-r;
-  if(x+r>476&&!exitLane)return true;
+  if(x+r>476)return true;
   for(const box of WORLD_SOLIDS)if(circleHitsRect(x,y,r,box))return true;
   if(!doors?.[0]?.open&&circleHitsRect(x,y,r,EXIT_SOLID))return true;
   return false;
