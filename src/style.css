@@ -74,3 +74,43 @@
   .main-menu{align-items:flex-start}
   .menu-card{max-height:calc(100% - 8px)}
 }
+
+/* Pro-style survival HUD */
+.posture-status{color:#d2c49a!important;letter-spacing:1px}
+.light-status{color:#aeb8a7!important}
+.bar.light-battery i{background:#b9b48a}
+.hud-top{gap:10px;align-items:center;flex-wrap:wrap}
+.hud-top .posture-status::before{content:"◆ ";color:#c87861}
+.hud-top .light-status::before{content:"◉ ";color:#c1c79c}
+.canvas-frame:not(.cinematic-mode) .hud-top,.canvas-frame:not(.cinematic-mode) .hud-bottom{backdrop-filter:blur(1px)}
+.touch-controls{display:none}
+@media(max-width:760px){
+  .touch-controls{display:block;padding:12px 13px;margin-top:10px;border:1px solid #495047;background:linear-gradient(135deg,rgba(24,31,28,.97),rgba(9,13,13,.98));box-shadow:0 10px 30px #0007;touch-action:none;user-select:none;-webkit-user-select:none}
+  .controller-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;color:#899589;font-size:7px;letter-spacing:1.5px}
+  .controller-heading b{color:#d0bd8d;font-size:8px;font-weight:600;letter-spacing:1px}
+  .controller-layout{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:126px}
+  .stick-column{display:flex;flex-direction:column;align-items:center;gap:5px;flex:0 0 132px}
+  .virtual-stick{width:122px;height:122px;display:grid;place-items:center;touch-action:none;position:relative;border-radius:50%;background:radial-gradient(circle,#2b342d 0%,#1b231f 56%,#151b18 57%,#202720 100%);border:1px solid #586154;box-shadow:inset 0 0 0 7px #131a16,0 0 0 2px #080d0b,0 6px 16px #0008}
+  .stick-ring{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;border:1px dashed #89917b55}
+  .stick-knob{width:49px;height:49px;border-radius:50%;background:radial-gradient(circle at 35% 28%,#89907c,#485447 56%,#242d27 100%);border:1px solid #a5a78c;box-shadow:0 3px 9px #000b,inset 0 1px 3px #d7d8b366;transform:translate(0,0);pointer-events:none}
+  .controller-caption{font-size:7px;letter-spacing:1.6px;color:#657164}
+  .touch-actions{display:grid;grid-template-columns:repeat(3,minmax(58px,1fr));grid-template-rows:repeat(2,52px);gap:7px;flex:1;max-width:300px}
+  .touch-action{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;border:1px solid #465045;background:linear-gradient(145deg,#222b25,#121916);color:#c8cfbf;font:600 8px 'IBM Plex Mono',monospace;letter-spacing:.7px;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 3px 7px #0008;transition:background .12s,border-color .12s,transform .12s}
+  .touch-action small{font-size:6px;color:#737f70;font-weight:400;letter-spacing:1px}
+  .touch-action:active,.touch-action.is-active{transform:translateY(1px);background:linear-gradient(145deg,#554238,#2a211d);border-color:#b16b55;color:#f2d5c4}
+  .run-action{border-color:#7a765a;color:#e6d79e}
+  .run-action small{color:#a69c70}
+  .attack-action{border-color:#8c4c42;color:#e0a69a}
+  #touch-light.is-active{border-color:#a6a47b;color:#ece8bd;background:linear-gradient(145deg,#454632,#282a20)}
+}
+@media(max-width:420px){
+  .touch-controls{padding:9px}
+  .controller-layout{gap:6px}
+  .stick-column{flex-basis:108px}
+  .virtual-stick{width:102px;height:102px}
+  .stick-knob{width:43px;height:43px}
+  .touch-actions{grid-template-columns:repeat(3,minmax(49px,1fr));grid-template-rows:repeat(2,48px);gap:5px}
+  .touch-action{font-size:7px}
+  .touch-action small{font-size:5px}
+  .hud-top{gap:6px;font-size:6px}
+}
