@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#090b0c" />
+    <meta name="description" content="Survive the outbreak in Green Home. A pixel-art survival horror game." />
+    <title>SWEET HOME — Green Home</title>
+  </head>
+  <body>
+    <div id="app">
+      <main class="shell">
+        <header class="topbar">
+          <a class="brand" href="#" aria-label="Sweet Home home"><span class="brand-mark">S</span><span>SWEET<span class="muted">/</span>HOME</span></a>
+          <div class="chapter">INCIDENT REPORT <span>№ 001 — GREEN HOME</span></div>
+          <div class="live"><i></i> SIGNAL UNSTABLE</div>
+        </header>
+        <section class="game-wrap">
+          <div class="game-heading"><div><span class="eyebrow">SEOUL, SOUTH KOREA · DAY 01</span><h1>GREEN HOME</h1></div><div class="build">SURVIVAL PROTOCOL <b>0.1.0</b></div></div>
+          <div class="canvas-frame">
+            <canvas id="game" width="480" height="270" aria-label="Sweet Home pixel survival game"></canvas>
+            <div class="scanlines"></div>
+            <div id="intro" class="overlay">
+              <div class="intro-card">
+                <div class="warning">⚠ EMERGENCY BROADCAST · 06:42 AM</div>
+                <div class="title-small">THE WORLD OUTSIDE IS</div>
+                <h2>NO LONGER<br/><em>YOUR HOME.</em></h2>
+                <p>Something is changing inside Green Home. Keep quiet. Find supplies. Don't let them see you.</p>
+                <button id="start" class="primary">ENTER GREEN HOME <span>↗</span></button>
+                <div class="save-note">SINGLE PLAYER <span>·</span> LOCAL SAVE</div>
+              </div>
+            </div>
+            <div id="gameover" class="overlay hidden">
+              <div class="intro-card"><div class="warning">SIGNAL LOST</div><h2>YOU DIDN'T<br/><em>MAKE IT.</em></h2><p>The residents will remember.</p><button id="retry" class="primary">TRY AGAIN ↻</button></div>
+            </div>
+            <div id="pause" class="pause hidden">PAUSED <span>PRESS P TO RETURN</span></div>
+            <div class="hud-top"><span>FLOOR <b id="floor">03</b></span><span>THREAT LEVEL <b class="threat">ELEVATED</b></span></div>
+            <div class="hud-bottom"><span>OBJECTIVE <b id="objective">Find a way out</b></span><span id="status">EXPLORING</span></div>
+          </div>
+          <div class="underbar"><div class="legend"><span><kbd>W A S D</kbd> MOVE</span><span><kbd>SPACE</kbd> ATTACK</span><span><kbd>E</kbd> INTERACT</span><span><kbd>P</kbd> PAUSE</span></div><div class="pixel-tag"><span></span> PIXEL SURVIVAL RPG</div></div>
+        </section>
+        <section class="dashboard">
+          <article class="panel vitals"><div class="panel-title">SURVIVOR STATUS <span>CH. 01</span></div><div class="survivor"><div class="portrait" aria-hidden="true"><span></span></div><div class="survivor-info"><b>CHA HYUN-SU</b><small>RESIDENT · UNIT 1410</small><div class="bar-label"><span>HEALTH</span><b id="hp-label">100 / 100</b></div><div class="bar"><i id="hp" style="width:100%"></i></div><div class="bar-label"><span>STAMINA</span><b id="stamina-label">100 / 100</b></div><div class="bar stamina"><i id="stamina" style="width:100%"></i></div></div></div></article>
+          <article class="panel inventory"><div class="panel-title">CARRIED ITEMS <span id="item-count">02 ITEMS</span></div><div class="items"><div class="item active"><span class="item-icon">▰</span><b>PIPE</b><small>MELEE · EQUIPPED</small></div><div class="item"><span class="item-icon med">✚</span><b>FIRST AID</b><small id="med-count">× 1 · PRESS E</small></div><div class="item empty"><span class="item-icon">＋</span><b>EMPTY SLOT</b><small>SEARCH FOR SUPPLIES</small></div></div></article>
+          <article class="panel mission"><div class="panel-title">CURRENT OBJECTIVE <span class="red-dot"></span></div><div class="mission-name">A QUIET WAY OUT</div><p>Find the stairwell. Avoid the infected. Every sound carries.</p><div class="mission-progress"><span id="mission-progress"></span></div><div class="mission-foot"><span id="progress-text">0 / 3 SUPPLIES FOUND</span><span>OPTIONAL</span></div></article>
+        </section>
+        <footer><span>UNOFFICIAL FAN-MADE PIXEL HORROR PROJECT</span><span>BUILT FOR THE NIGHT SHIFT <b>✦</b></span></footer>
+      </main>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
