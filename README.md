@@ -12,7 +12,7 @@ An unofficial, fan-made pixel-art survival horror browser game inspired by the K
 - Master-volume and mute controls, persisted in the browser.
 - Touch controls for phones and tablets, plus keyboard controls for desktop.
 - Vite build output configured for Cloudflare Pages.
-- The [pixelfx](https://github.com/patch-gg/pixelfx) library retained as the pixel-effects foundation.
+- PixelFX-powered animated melee slash effects, composited on a transparent effects layer.
 
 ## Controls
 
