@@ -93,12 +93,12 @@ function drawFloor(){
   // hazard stripes
   for(let x=432;x<452;x+=6){line(x,111,x+5,106,"#8d6539");}
 }
-function movingForSprite(p){return p.sprinting||Math.abs(p.x-p.prevX||0)>.01||Math.abs(p.y-p.prevY||0)>.01;}
+function movingForSprite(p){return !!p.moving;}
 function drawPlayer(){
   const p=player;
   const x=Math.round(p.x);
   const phase=elapsed*(p.sprinting?18:p.crouched?4:10);
-  const bob=(Math.sin(phase)*(p.crouched?.25:p.sprinting?1.15:.65))+(p.crouched?1:0);
+  const bob=(Math.sin(phase)*(p.crouched ? 0.25 : p.sprinting ? 1.15 : 0.65))+(p.crouched?1:0);
   const y=Math.round(p.y+bob);
   const legSwing=movingForSprite(p)?Math.round(Math.sin(phase)* (p.sprinting?2:1)):0;
   // shadow
@@ -200,6 +200,7 @@ function update(dt){
   if(keys.has("d")||keys.has("arrowright"))dx++;
   dx+=touchMove.x;dy+=touchMove.y;
   const moving=!!(dx||dy),magnitude=Math.hypot(dx,dy);
+  player.moving=moving;
   if(magnitude>1){dx/=magnitude;dy/=magnitude;}
   const sprinting=keys.has("shift")&&!player.crouched&&moving&&player.stamina>1;
   player.sprinting=!!sprinting;
