@@ -42,6 +42,9 @@ const ui = {
 const clamp = (n,a,b) => Math.max(a, Math.min(b,n));
 const rnd = (a,b) => a + Math.random() * (b-a);
 function reset() {
+  keys.clear();touchMove={x:0,y:0};stickPointer=null;
+  if(ui.stickKnob)ui.stickKnob.style.transform="translate(0,0)";
+  if(ui.touchSprint)ui.touchSprint.classList.remove("is-active");
   player = {x:76,y:136,r:5,hp:100,stamina:100,faceX:1,faceY:0,attack:0,cooldown:0,invuln:0,crouched:false,flashlight:true,lightBattery:100};
   enemies = [{x:342,y:104,hp:3,speed:27,hit:0,alertTimer:0},{x:396,y:195,hp:3,speed:24,hit:0,alertTimer:0},{x:268,y:223,hp:2,speed:30,hit:0,alertTimer:0}];
   pickups = [
@@ -489,12 +492,15 @@ document.querySelector("#retry").addEventListener("click",()=>{
 function togglePause(){
   if(!running||gameEnded)return;
   paused=!paused;ui.pause.classList.toggle("hidden",!paused);
+  keys.clear();touchMove={x:0,y:0};stickPointer=null;
+  if(ui.stickKnob)ui.stickKnob.style.transform="translate(0,0)";
+  if(ui.touchSprint)ui.touchSprint.classList.remove("is-active");
   audio.sfx("menu");audio.scene(paused?"menu":"game");
 }
 function toggleCrouch(){
   if(!running||paused||gameEnded)return;
   player.crouched=!player.crouched;
-  if(player.crouched)keys.delete("shift");
+  if(player.crouched){keys.delete("shift");ui.touchSprint.classList.remove("is-active");}
   audio.sfx("soft-step");updateUI();
 }
 function toggleFlashlight(){
@@ -503,7 +509,8 @@ function toggleFlashlight(){
   audio.sfx("light-click");updateUI();
 }
 function returnToMenu(){
-  running=false;paused=false;cinematic=false;keys.clear();
+  running=false;paused=false;cinematic=false;keys.clear();touchMove={x:0,y:0};stickPointer=null;
+  ui.stickKnob.style.transform="translate(0,0)";ui.touchSprint.classList.remove("is-active");
   ui.pause.classList.add("hidden");ui.intro.classList.add("hidden");
   ui.gameover.classList.add("hidden");ui.victory.classList.add("hidden");ui.touchControls.classList.add("hidden");
   ui.cinematic.classList.add("hidden");ui.menu.classList.remove("hidden");
