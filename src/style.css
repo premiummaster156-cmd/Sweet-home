@@ -56,3 +56,19 @@
   .touch-actions button{min-width:58px;padding:0 7px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+@media(max-width:760px){
+  .main-menu{padding:7px 0}
+  .menu-card{max-height:calc(100% - 14px);overflow-y:auto;overscroll-behavior:contain;padding:16px 18px 12px}
+  .menu-kicker{margin-bottom:8px;font-size:7px}
+  .menu-logo{font-size:48px;line-height:.76}
+  .menu-chapter{margin-top:12px;font-size:8px}
+  .menu-copy{font-size:7px;margin:8px 0 12px}
+  .menu-actions{gap:7px}
+  .menu-secondary button,.menu-outline{padding:8px}
+  .menu-footnote{margin-top:11px;padding-top:8px;font-size:6px}
+}
+@media(max-height:520px){
+  .main-menu{align-items:flex-start}
+  .menu-card{max-height:calc(100% - 8px)}
+}
