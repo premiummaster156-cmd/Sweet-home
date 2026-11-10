@@ -46,7 +46,11 @@ function reset() {
   if(ui.stickKnob)ui.stickKnob.style.transform="translate(0,0)";
   if(ui.touchSprint)ui.touchSprint.classList.remove("is-active");
   player = {x:76,y:136,r:5,hp:100,stamina:100,faceX:1,faceY:0,attack:0,cooldown:0,invuln:0,crouched:false,flashlight:true,lightBattery:100};
-  enemies = [{x:342,y:104,hp:3,speed:27,hit:0,alertTimer:0},{x:396,y:195,hp:3,speed:24,hit:0,alertTimer:0},{x:268,y:223,hp:2,speed:30,hit:0,alertTimer:0}];
+  enemies = [
+    {x:342,y:104,hp:3,speed:27,hit:0,alertTimer:0,variant:0},
+    {x:396,y:195,hp:3,speed:24,hit:0,alertTimer:0,variant:1},
+    {x:268,y:223,hp:2,speed:30,hit:0,alertTimer:0,variant:2}
+  ];
   pickups = [
     {x:125,y:70,type:"med",taken:false},
     {x:220,y:185,type:"supply",taken:false},
@@ -60,121 +64,254 @@ function reset() {
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
 function line(x1,y1,x2,y2,c){ctx.strokeStyle=c;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
 function text(s,x,y,c="#b8b8ad"){ctx.fillStyle=c;ctx.font="7px monospace";ctx.fillText(s,x,y);}
+function diamond(cx,cy,rx,ry,fill,stroke){
+  ctx.beginPath();ctx.moveTo(cx,cy-ry);ctx.lineTo(cx+rx,cy);ctx.lineTo(cx,cy+ry);ctx.lineTo(cx-rx,cy);ctx.closePath();
+  ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}
+}
+function wallDoor(x,y,w,h,label,variant=0){
+  // deep inset and thick stained frame
+  rect(x-3,y-3,w+6,h+7,"#111615");
+  rect(x-2,y-2,w+4,h+5,"#4a4d44");
+  rect(x,y,w,h,"#252b29");
+  rect(x+3,y+3,w-6,h-5,variant===1?"#383832":"#303531");
+  rect(x+5,y+5,w-10,3,"#57564b");
+  rect(x+5,y+9,w-10,h-17,"#282e2b");
+  rect(x+7,y+11,2,h-21,"#45483e");
+  rect(x+w-10,y+h*.55,2,4,"#a08a62");
+  rect(x+w-7,y+h*.55,2,4,"#171a18");
+  rect(x+w*.5-7,y+5,14,5,"#777263");
+  rect(x+w*.5-5,y+6,10,2,"#b0a58a");
+  // chipped paint around bottom of the frame
+  rect(x+3,y+h-4,4,2,"#646052");rect(x+w-7,y+h-3,4,2,"#666153");
+  text(label,x+w/2-9,y+h+12,"#aaa48b");
+}
 function drawFloor(){
-  rect(0,0,W,H,"#15191a");
-  // old concrete tiles
-  for(let y=14;y<H;y+=24) for(let x=0;x<W;x+=32){
-    rect(x,y,31,23,(Math.floor(x/32+y/24)%3===0)?"#202526":"#1c2122");
-    line(x,y,x+30,y,"#293031"); line(x,y,x,y+22,"#171b1c");
-    if((x*7+y*11)%13===0) rect(x+8,y+11,2,1,"#343333");
+  // A single old Green Home floor: cool concrete, nicotine-stained walls and restrained emergency lighting.
+  rect(0,0,W,H,"#171c1b");
+  rect(0,0,W,70,"#252a27");
+  // upper wall brickwork with uneven mortar and patches
+  for(let row=0;row<8;row++){
+    const yy=7+row*8,offset=row%2?13:0;
+    for(let col=-1;col<19;col++){
+      const xx=col*27+offset;
+      const n=(col*13+row*7+80)%7;
+      rect(xx,yy,25,6,n===0?"#343833":n===1?"#2b312d":"#303530");
+      line(xx,yy+6,xx+24,yy+6,"#1b201d");
+      if(n===2)rect(xx+5,yy+2,4,1,"#46483d");
+      if(n===4)rect(xx+18,yy+1,3,2,"#252a27");
+    }
   }
-  // side rooms and corridor walls
-  rect(0,0,W,13,"#33383a"); rect(0,13,W,3,"#55534b");
-  rect(0,253,W,17,"#303537"); rect(0,253,W,2,"#626057");
-  rect(0,16,7,237,"#353a3b"); rect(473,16,7,237,"#353a3b");
-  // wall vents and ceiling lights
-  for(let x=38;x<450;x+=102){rect(x,3,28,6,"#68685d");rect(x+3,5,22,2,"#b1b19a");}
-  // room dividers, broken wall sections
-  rect(155,16,5,54,"#494b45");rect(155,70,24,4,"#494b45");rect(155,74,5,34,"#494b45");
-  rect(310,16,5,42,"#494b45");rect(310,58,29,4,"#494b45");rect(334,62,5,26,"#494b45");
-  rect(155,201,5,51,"#494b45");rect(310,225,5,28,"#494b45");
-  // rugs and stains
-  rect(29,91,79,49,"#292a27");rect(32,94,73,43,"#3a3530");
-  for(let i=0;i<18;i++) rect(35+(i*17)%66,98+(i*23)%35,2,1,"#51443d");
-  rect(183,35,57,21,"#292e2d");rect(186,38,51,15,"#353a38");
-  // furniture, overturned cabinets
-  rect(20,35,32,25,"#40372f");rect(23,38,26,19,"#59483a");rect(24,40,24,2,"#76604a");
-  rect(375,30,56,24,"#3a3029");rect(378,33,50,18,"#514237");rect(382,36,13,11,"#272b2a");
-  rect(362,211,57,19,"#42372e");rect(365,214,51,13,"#5b4a39");
-  rect(186,213,42,25,"#333736");rect(190,217,34,17,"#4b4b43");
-  // blood trails
-  rect(262,112,4,10,"#4e2224");rect(267,118,9,3,"#5d2427");rect(274,123,3,7,"#492124");
-  rect(92,167,7,2,"#542528");rect(101,171,3,5,"#542528");
-  // door and exit
-  rect(450,116,22,43,"#171a19");rect(454,119,15,37,"#5b4a38");rect(457,122,9,31,"#3b332c");
-  rect(462,136,2,2,"#d1a15a");
-  // hazard stripes
-  for(let x=432;x<452;x+=6){line(x,111,x+5,106,"#8d6539");}
+  // damp wall stains and old paint layers
+  rect(0,63,W,7,"#43463d");rect(0,67,W,3,"#282e2a");
+  for(let i=0;i<31;i++){
+    const x=(i*71+17)%W,y=20+(i*19)%43;
+    rect(x,y,2+(i%4),1,"#41443b");
+  }
+  // exposed pipes, conduits and old fluorescent fixtures
+  rect(16,0,4,70,"#515249");rect(20,0,2,70,"#171d1a");
+  rect(457,0,5,69,"#494d43");rect(453,0,2,69,"#171c1a");
+  rect(28,5,170,2,"#55574c");rect(28,7,170,2,"#171d1a");
+  rect(281,5,151,2,"#55574c");rect(281,7,151,2,"#171d1a");
+  for(let x=40;x<445;x+=102){
+    rect(x,10,29,5,"#141a18");rect(x+2,11,25,2,"#837c63");
+    rect(x+4,11,20,1,"#b2a982");
+  }
+  // three apartment doors and old brass number plates
+  wallDoor(65,29,43,35,"608");
+  wallDoor(216,24,48,40,"605",1);
+  wallDoor(365,29,43,35,"616");
+  // door frames have shadowed concrete lintels
+  rect(59,24,55,4,"#4d5147");rect(210,19,60,5,"#4e5147");rect(359,24,55,4,"#4d5147");
+  // intercom panel and faded building directory
+  rect(122,30,26,37,"#151a18");rect(125,33,20,30,"#41463c");
+  rect(128,36,14,6,"#8d8166");rect(130,38,10,2,"#1b211e");
+  for(let y=46;y<60;y+=4){rect(128,y,3,2,"#a14f42");rect(133,y,8,2,"#777665");}
+  rect(152,41,43,17,"#1c211f");rect(155,44,37,11,"#514a3d");
+  text("GREEN HOME",158,51,"#a9a18a");
+  // elevator/service alcove in the centre.
+  rect(279,29,61,37,"#131a18");rect(282,32,55,31,"#41463f");
+  rect(286,35,47,25,"#252b28");rect(289,38,21,19,"#343a35");rect(312,38,18,19,"#343a35");
+  line(310,38,310,57,"#101714");rect(303,26,13,5,"#77745f");rect(306,27,7,2,"#ba9d6c");
+  rect(346,36,10,23,"#272c28");rect(348,38,6,4,"#a84c43");rect(349,45,4,2,"#aaa184");
+  // corridor floor: hand-laid diamond slabs, chipped edges and subtle grime.
+  rect(0,70,W,183,"#222825");
+  for(let row=0;row<11;row++){
+    for(let col=-2;col<15;col++){
+      const cx=col*40+(row%2)*20,cy=78+row*17;
+      const n=(col*9+row*5+80)%9;
+      const shades=["#343a35","#303631","#394039","#2d342f","#353b35","#313833","#2a312d","#3a4039","#303631"];
+      diamond(cx,cy,20,9,shades[n],"#171e1a");
+      // a slightly worn inner edge catches a little ambient light
+      line(cx-13,cy,cx,cy-6,"#44483f");
+      if((col+row*3)%7===0){
+        rect(cx-5,cy+2,4,1,"#555047");
+        rect(cx+4,cy-2,2,1,"#222824");
+      }
+      if((col*3+row)%11===0){
+        line(cx+3,cy+2,cx+7,cy+4,"#1b211e");
+        line(cx+7,cy+4,cx+9,cy+2,"#4a463d");
+      }
+    }
+  }
+  // thin wall skirting and side concrete returns
+  rect(0,68,W,3,"#55574a");rect(0,71,W,2,"#171e1a");
+  rect(0,247,W,6,"#3d433b");rect(0,251,W,2,"#151b18");
+  rect(0,70,7,179,"#343a35");rect(7,70,2,179,"#131917");
+  rect(471,70,9,179,"#343a35");rect(469,70,2,179,"#131917");
+  // left-side bench, torn cushion and scattered papers
+  rect(15,91,52,25,"#101614");rect(18,88,47,21,"#383d36");
+  rect(21,91,41,13,"#4c4b40");rect(24,94,35,7,"#333832");
+  rect(20,107,5,9,"#282d28");rect(57,107,5,9,"#282d28");
+  rect(31,93,9,2,"#696252");rect(44,96,8,1,"#746453");
+  // small potted plant, mostly dried out
+  rect(16,136,16,12,"#161c18");rect(18,138,12,8,"#4a4032");
+  rect(20,140,8,5,"#766b53");rect(23,128,2,11,"#465043");
+  rect(18,130,5,4,"#525e4b");rect(25,126,5,5,"#414b3e");
+  rect(16,127,5,3,"#62664f");
+  // right utility cabinet, rusted pipes and fallen rubbish
+  rect(423,86,39,35,"#141a17");rect(426,89,33,29,"#4a4b40");
+  rect(429,92,27,22,"#303631");rect(432,95,21,16,"#202723");
+  rect(437,97,2,11,"#777361");rect(444,97,2,11,"#777361");
+  rect(431,91,22,2,"#8b8166");rect(453,103,3,4,"#a08b61");
+  rect(401,126,12,8,"#171d19");rect(403,123,8,7,"#3d4037");
+  rect(396,130,7,4,"#68604e");rect(413,131,5,3,"#6a5b48");
+  // toppled chair and old cardboard near the bottom wall
+  rect(34,206,31,18,"#151a17");rect(38,202,24,5,"#4a4031");
+  rect(41,207,18,12,"#5a4939");rect(43,209,14,8,"#353a33");
+  line(39,222,35,228,"#6c5b44");line(60,220,65,228,"#6c5b44");
+  rect(81,223,21,11,"#494436");rect(84,225,16,7,"#6a604b");
+  // old emergency extinguisher, pipe joints and electrical boxes
+  rect(106,89,9,18,"#5a3c31");rect(108,86,5,4,"#88745b");rect(109,91,3,10,"#8b4a3e");
+  rect(111,87,4,2,"#b5a17b");
+  rect(354,91,10,23,"#1b211e");rect(356,93,6,18,"#494a3d");
+  rect(358,96,3,9,"#9c4d3f");rect(360,92,2,3,"#b2a17a");
+  rect(391,193,32,24,"#141a17");rect(394,196,26,18,"#413e34");
+  rect(398,198,18,13,"#282e29");rect(402,201,9,2,"#71634c");
+  // a small pool of old blood and shoe scuffs, not neon red splashes
+  rect(258,120,7,2,"#4d2928");rect(265,122,4,2,"#492526");
+  rect(268,125,9,2,"#422323");rect(274,128,3,5,"#422323");
+  rect(247,127,2,3,"#64403a");rect(253,133,3,1,"#52443b");
+  rect(92,175,7,2,"#4c2927");rect(101,177,3,4,"#492625");
+  rect(107,181,4,1,"#422421");rect(112,184,2,2,"#4e302a");
+  rect(305,204,3,1,"#555046");rect(310,207,6,1,"#4f4a40");
+  // scattered papers and small floor debris
+  for(let i=0;i<19;i++){
+    const x=(i*67+28)%W,y=88+(i*41)%151;
+    if((x<70&&y<150)||(x>420&&y<140))continue;
+    rect(x,y,2+(i%3),1,"#77715e");
+    if(i%3===0)rect(x+2,y+1,1,1,"#aea084");
+  }
+  // the right-hand exit to the stairwell, framed in battered steel
+  rect(448,112,27,50,"#101614");rect(450,114,23,46,"#55564b");
+  rect(453,117,17,40,"#222a26");rect(456,120,11,34,"#303832");
+  rect(458,122,7,30,"#262e29");rect(464,137,2,3,"#c0a16c");
+  rect(450,109,23,3,"#8b8063");rect(450,161,23,3,"#817861");
+  rect(443,109,4,8,"#756e56");rect(473,110,5,7,"#756e56");
+  text("STAIR",452,104,"#a69b7e");
+  // Emergency fixture's dim, warm spill on the floor.
+  rect(219,71,24,2,"#4b4638");rect(224,65,14,6,"#171e1a");
+  rect(227,67,8,2,"#a38b61");rect(228,67,5,1,"#c1a677");
 }
 function movingForSprite(p){return !!p.moving;}
 function drawPlayer(){
-  const p=player;
-  const x=Math.round(p.x);
-  const phase=elapsed*(p.sprinting?18:p.crouched?4:10);
-  const bob=(Math.sin(phase)*(p.crouched ? 0.25 : p.sprinting ? 1.15 : 0.65))+(p.crouched?1:0);
-  const y=Math.round(p.y+bob);
-  const legSwing=movingForSprite(p)?Math.round(Math.sin(phase)* (p.sprinting?2:1)):0;
-  // shadow
-  rect(x-6,y+5,12,3,"#101313");
-  if(p.invuln>0 && Math.floor(elapsed*14)%2===0) return;
-  // feet, dark trousers, jacket, face, hair
-  rect(x-4,y+2+legSwing,3,5,"#252b31");rect(x+1,y+2-legSwing,3,5,"#252b31");
-  rect(x-5,y-5,10,9,"#6b7470");rect(x-4,y-4,8,7,"#858b7e");
-  rect(x-3,y-8,6,5,"#b38d6b");rect(x-4,y-10,8,4,"#202426");
-  rect(x-5,y-9,3,3,"#202426");rect(x+2,y-9,3,2,"#202426");
-  // backpack strap and eyes
-  rect(x-2,y-4,2,5,"#454a43");rect(x+1,y-7,1,1,"#202020");
-  // weapon facing direction
-  const wx=x+p.faceX*9, wy=y+p.faceY*9;
-  if(p.attack>0){rect(wx-2,wy-2,5,5,"#d6d1bd");rect(wx-1,wy-1,3,3,"#f1e9ce");}
-  else {line(x+p.faceX*4,y+p.faceY*3,wx,wy,"#9d9a89");}
+  const p=player,x=Math.round(p.x);
+  const phase=elapsed*(p.sprinting?17:p.crouched?4:9);
+  const bob=Math.round(Math.sin(phase)*(p.crouched?0:p.sprinting?1:0.5));
+  const y=Math.round(p.y+bob+(p.crouched?2:0));
+  const stride=movingForSprite(p)?Math.round(Math.sin(phase)*(p.sprinting?2:1)):0;
+  // Ground shadow and a narrow flashlight cast shadow keep the sprite planted in the scene.
+  rect(x-8,y+7,16,4,"#101412");rect(x-5,y+8,10,2,"#090d0b");
+  if(p.invuln>0&&Math.floor(elapsed*14)%2===0)return;
+  // Back of the jacket and small worn backpack.
+  rect(x-7,y-8,14,14,"#111714");
+  rect(x-8,y-7,4,10,"#252b26");rect(x-9,y-4,3,6,"#363a31");
+  rect(x-6,y-8,12,13,"#42463d");rect(x-5,y-7,10,11,"#353a34");
+  rect(x-4,y-6,8,8,"#505044");rect(x-6,y-4,2,5,"#222a25");
+  // Hood seam, shoulder folds and a quiet dark-red inner layer.
+  rect(x-5,y-9,10,3,"#262b27");rect(x-3,y-9,6,2,"#6b6553");
+  rect(x-2,y-4,4,6,"#6b4038");rect(x-1,y-3,2,4,"#8a5144");
+  rect(x-6,y-3,2,4,"#686b5d");rect(x+4,y-3,2,4,"#686b5d");
+  // Thin arms. Their pixel position shifts slightly during the walk cycle.
+  rect(x-8,y-2+stride,3,7,"#262d28");rect(x+5,y-2-stride,3,7,"#262d28");
+  rect(x-8,y+3+stride,3,2,"#8b7761");rect(x+5,y+3-stride,3,2,"#8b7761");
+  // Narrow trousers and independently animated feet.
+  rect(x-5,y+4+stride,4,6,"#242a26");rect(x+1,y+4-stride,4,6,"#242a26");
+  rect(x-6,y+8+stride,5,2,"#151a18");rect(x+1,y+8-stride,5,2,"#151a18");
+  // Head: shaggy black hair, pale face and uneven fringe; overhead-facing pose is kept readable.
+  rect(x-5,y-17,10,10,"#101513");
+  rect(x-4,y-18,8,9,"#282b27");rect(x-5,y-16,10,5,"#1a211e");
+  rect(x-4,y-12,8,4,"#b49a7c");rect(x-3,y-11,6,3,"#c1a486");
+  if(p.faceY<0){
+    rect(x-5,y-17,10,6,"#171d1a");rect(x-4,y-14,8,3,"#272a25");
+  }else if(p.faceX!==0){
+    rect(x-4,y-14,7,4,"#b99b7d");rect(x-2,y-15,7,3,"#161c19");
+    rect(x+2*p.faceX,y-12,2,1,"#211e1a");
+  }else{
+    rect(x-5,y-15,10,3,"#111714");rect(x-4,y-12,8,3,"#c1a282");
+    rect(x-3,y-10,2,1,"#1b211d");rect(x+2,y-10,2,1,"#1b211d");
+  }
+  rect(x-6,y-17,3,3,"#101613");rect(x+3,y-18,3,3,"#101613");
+  // Weapon: a battered steel pipe held low beside the body.
+  if(p.attack>0){
+    rect(x+p.faceX*8-3,y+p.faceY*8-3,6,6,"#c1b49b");
+    rect(x+p.faceX*8-1,y+p.faceY*8-1,3,3,"#e0d4b8");
+  }else{
+    line(x+p.faceX*5,y+p.faceY*4,x+p.faceX*10,y+p.faceY*9,"#857e6b");
+    rect(x+p.faceX*9-1,y+p.faceY*8-1,2,2,"#c1b69d");
+  }
+  // A small muted strap and metal catch give the silhouette its own readable details.
+  rect(x-4,y-6,1,7,"#77735e");rect(x+3,y-5,1,4,"#1b201d");
+  rect(x-1,y+1,2,1,"#a34b40");
 }
 function drawEnemy(e){
-  const x=Math.round(e.x),y=Math.round(e.y);
-  rect(x-6,y+5,13,3,"#101313");
-  rect(x-5,y-5,10,11,"#302d30");rect(x-4,y-8,8,5,"#4b3b3c");
-  rect(x-6,y-4,3,8,"#3d3032");rect(x+3,y-4,3,8,"#3d3032");
-  rect(x-3,y-7,2,2,"#b34b43");rect(x+2,y-7,2,2,"#b34b43");
-  rect(x-3,y+1,7,2,"#6a3032");
-  if(e.hit>0){rect(x-7,y-10,14,1,"#e6b4a0");}
-  // small health ticks
-  for(let i=0;i<e.hp;i++) rect(x-4+i*3,y-12,2,1,"#a84542");
+  const x=Math.round(e.x),phase=elapsed*(e.alertTimer>0?15:6);
+  const twitch=Math.round(Math.sin(phase)*1.3);
+  const y=Math.round(e.y+twitch);
+  // A heavy, irregular shadow gives the infected a different weight to the player.
+  rect(x-9,y+7,18,4,"#0b100e");rect(x-7,y+8,14,2,"#080c0a");
+  if(e.variant===2){
+    // A low crawler with a long, dragging forearm.
+    rect(x-8,y-2,16,10,"#1d2521");
+    rect(x-7,y-5,11,8,"#3d4139");rect(x-3,y-8,9,8,"#5b594b");
+    rect(x-12,y+1,7,3,"#33382f");rect(x-16,y+3,8,2,"#282e28");
+    rect(x+4,y+4,7,3,"#33382f");rect(x+7,y+7,7,2,"#252c26");
+    rect(x-3,y-7,2,2,"#a05b4c");rect(x+2,y-6,2,2,"#a05b4c");
+  }else{
+    // A standing, malformed resident: narrow torso, dropped shoulders and arms hanging too low.
+    rect(x-8,y-7,16,15,"#171e1a");
+    rect(x-7,y-9,14,13,"#41443b");rect(x-5,y-8,10,10,"#555449");
+    rect(x-7,y-6,3,10,"#333b34");rect(x+4,y-6,3,10,"#333b34");
+    rect(x-9,y-3+twitch,3,10,"#41443a");rect(x+6,y-2-twitch,3,11,"#393e36");
+    rect(x-10,y+6+twitch,3,4,"#292f29");rect(x+7,y+7-twitch,3,4,"#252b26");
+    rect(x-5,y+5,4,4,"#4d4237");rect(x+2,y+5,4,4,"#483d34");
+    // Torn neck and an uneven, partially obscured face.
+    rect(x-5,y-16,10,10,"#151b18");rect(x-4,y-15,8,8,"#55564a");
+    rect(x-5,y-17,10,4,"#202721");rect(x-6,y-14,3,5,"#2f3830");
+    rect(x-3,y-10,2,2,"#a14c43");rect(x+2,y-11,2,2,"#a14c43");
+    rect(x-2,y-6,5,2,"#302b26");
+    // Vein-like dark splits and old blood, kept in restrained reds.
+    rect(x-6,y-4,2,5,"#6c3932");rect(x+4,y-2,2,4,"#6c3932");
+    rect(x-1,y+1,2,4,"#6e3832");
+    if(e.variant===1){rect(x-12,y-1,3,8,"#4a493d");rect(x-13,y+5,3,5,"#33382f");}
+  }
+  if(e.hit>0){rect(x-8,y-19,16,2,"#b38b70");rect(x-5,y-20,10,1,"#6d3730");}
+  if(e.alertTimer>0){rect(x-1,y-23,3,2,"#b85b4c");rect(x,y-25,1,1,"#d3a17b");}
 }
 function drawPickup(p){
   if(p.taken)return;
-  const x=Math.round(p.x),y=Math.round(p.y);
-  rect(x-5,y-5,11,11,"#101313");
-  if(p.type==="med"){rect(x-4,y-4,9,9,"#d7d1bb");rect(x-1,y-3,3,7,"#a94945");rect(x-3,y-1,7,3,"#a94945");}
-  else {rect(x-4,y-4,9,9,"#7b674a");rect(x-2,y-2,5,5,"#c0a06a");rect(x,y-1,2,3,"#e6d39b");}
-}
-function spawnBurst(x,y,color,n=10){
-  for(let i=0;i<n;i++) particles.push({x,y,vx:rnd(-45,45),vy:rnd(-50,20),life:rnd(.18,.48),max:.48,color,size:Math.random()<.5?1:2});
-}
-function attack(){
-  if(!running||paused||player.cooldown>0||player.stamina<16||gameEnded)return;
-  player.attack=.19;player.cooldown=.38;player.stamina-=16;shake=4;
-  audio.sfx("swing");
-  if(typeof PixelFX.createFx==="function"){
-    const angle=player.faceX===-1?Math.PI:player.faceY===1?Math.PI/2:player.faceY===-1?-Math.PI/2:0;
-    fxList.push(PixelFX.createFx(SwordSlash,{
-      x:player.x-6,y:player.y+26,angle,seed:Math.floor(elapsed*1000)%9999,
-      palette:["#34191e","#672d35","#963e45","#c65b5c","#df8c7e","#f0c5ac","#fff0dc"],
-      sparks:["#fff0d5","#e8ad81","#c65b5c","#7a3038"]
-    }));
+  const x=Math.round(p.x),y=Math.round(p.y),pulse=(Math.sin(elapsed*2.4)+1)*.5;
+  rect(x-7,y+5,14,3,"#101512");
+  if(p.type==="med"){
+    rect(x-6,y-5,12,11,"#1a211d");rect(x-5,y-6,10,11,"#82775e");
+    rect(x-4,y-4,8,8,"#b2a589");rect(x-2,y-3,4,6,"#6e4339");
+    rect(x-1,y-5,2,10,"#c8bca0");rect(x-5,y-1,10,2,"#c8bca0");
+    rect(x-3,y-7,6,2,"#49483c");
+  }else{
+    rect(x-6,y-5,12,11,"#181f1a");rect(x-5,y-6,10,10,"#5d5948");
+    rect(x-4,y-4,8,7,"#867557");rect(x-3,y-3,6,5,"#4c483b");
+    rect(x-1,y-5,2,2,"#a79a75");rect(x-4,y+2,8,1,"#a79a75");
   }
-  spawnBurst(player.x+player.faceX*9,player.y+player.faceY*9,"#d9d1b4",6);
-  for(const e of enemies){
-    const dx=e.x-player.x,dy=e.y-player.y,dist=Math.hypot(dx,dy);
-    const facing=(dx*player.faceX+dy*player.faceY)/(dist||1);
-    if(dist<27&&facing>-.15){e.hp--;e.hit=.16;e.x+=player.faceX*5;e.y+=player.faceY*5;spawnBurst(e.x,e.y,"#a74343",8);shake=7;audio.sfx("hit");if(e.hp<=0){spawnBurst(e.x,e.y,"#613236",16);audio.sfx("enemy-down");}}
-  }
-  enemies=enemies.filter(e=>e.hp>0);
-}
-function interact(){
-  if(!running||paused||gameEnded)return;
-  const p=player;
-  const med=pickups.find(v=>!v.taken&&v.type==="med"&&Math.hypot(v.x-p.x,v.y-p.y)<23);
-  if(med){med.taken=true;medkits++;ui.status.textContent="FIRST AID COLLECTED";audio.sfx("pickup");updateUI();return;}
-  const supply=pickups.find(v=>!v.taken&&v.type==="supply"&&Math.hypot(v.x-p.x,v.y-p.y)<23);
-  if(supply){supply.taken=true;objectiveProgress=Math.min(3,objectiveProgress+1);ui.status.textContent="SUPPLY SECURED";audio.sfx("pickup");updateUI();return;}
-  if(Math.hypot(456-p.x,137-p.y)<29){
-    if(objectiveProgress>=3){
-      ui.objective.textContent="Chapter complete";ui.status.textContent="CHAPTER COMPLETE";
-      gameEnded=true;running=false;ui.victory.classList.remove("hidden");ui.touchControls.classList.add("hidden");audio.sfx("victory");audio.scene("menu");return;
-    }
-    ui.status.textContent="EXIT LOCKED · FIND ALL 3 SUPPLIES";
-  } else if(medkits>0&&p.hp<75){medkits--;p.hp=Math.min(100,p.hp+35);ui.status.textContent="FIRST AID USED";audio.sfx("heal");updateUI();}
-  else ui.status.textContent="NOTHING WITHIN REACH";
+  if(pulse>.82){rect(x-1,y-10,2,2,"#b7a27a");}
 }
 function updateUI(){
   ui.hp.style.width=player.hp+"%";ui.hpLabel.textContent=Math.ceil(player.hp)+" / 100";
