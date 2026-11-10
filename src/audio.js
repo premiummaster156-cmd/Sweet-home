@@ -152,6 +152,22 @@ export function createAudioEngine() {
         noise(0.055, 0.028, 270);
         tone(72, 0.06, "sine", 0.018, 48);
         break;
+      case "heavy-step":
+        noise(0.085, 0.075, 430);
+        tone(66, 0.10, "sine", 0.06, 39);
+        break;
+      case "soft-step":
+        noise(0.045, 0.014, 190);
+        tone(98, 0.06, "sine", 0.012, 71);
+        break;
+      case "light-click":
+        noise(0.035, 0.025, 2300);
+        tone(670, 0.045, "square", 0.012, 420, 0.025);
+        break;
+      case "breath":
+        noise(0.65, 0.045, 600);
+        tone(92, 0.55, "sine", 0.018, 62);
+        break;
       case "swing":
         noise(0.16, 0.07, 1900);
         tone(250, 0.14, "triangle", 0.035, 90);
