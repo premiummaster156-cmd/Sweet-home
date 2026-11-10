@@ -24,8 +24,8 @@ Work is on the review branch `fix/m0-playable-chapter`. The production branch `m
 ## Verification
 
 - Static JavaScript syntax compilation of the edited `main.js` passed after removing its top-level import declarations for the syntax check.
-- GitHub Actions production dependency installation and `npm run build` passed on the M0 branch, including its latest commit `b6d4fc77b1501ead542a2d835f0bfabf5ccbb5ea`.
-- Build run: https://github.com/premiummaster156-cmd/Sweet-home/actions/runs/42856798012
+- GitHub Actions production dependency installation and `npm run build` passed on the M0 branch, including its latest branch head `24ba099ac28be4d9f8b981111460046f00cad5e2`.
+- Build run: https://github.com/premiummaster156-cmd/Sweet-home/actions/runs/42857781386
 
 ## Not yet verified
 
