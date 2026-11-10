@@ -21,7 +21,7 @@ An unofficial, fan-made pixel-art survival horror browser game inspired by the K
 | Move | WASD / arrow keys | Direction pad |
 | Attack | Space | Attack |
 | Interact / collect / use | E | Interact |
-| Pause | P or Escape | — |
+| Pause | P or Escape | Pause button |
 
 ## Run locally
 
