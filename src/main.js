@@ -1,5 +1,6 @@
 import "./style.css";
 import * as PixelFX from "pixelfx";
+import * as SwordSlash from "pixelfx/fx/melee/sword-slash";
 import { createAudioEngine } from "./audio.js";
 
 const canvas = document.querySelector("#game");
@@ -7,6 +8,11 @@ const ctx = canvas.getContext("2d", { alpha: false });
 ctx.imageSmoothingEnabled = false;
 const W = canvas.width, H = canvas.height;
 const buffer = typeof PixelFX.createFrame === "function" ? PixelFX.createFrame(W, H) : null;
+const effectCanvas = document.createElement("canvas");
+effectCanvas.width = W; effectCanvas.height = H;
+const effectCtx = effectCanvas.getContext("2d");
+effectCtx.imageSmoothingEnabled = false;
+const effectImage = effectCtx.createImageData(W, H);
 const audio = createAudioEngine();
 let running = false, paused = false, last = 0, elapsed = 0, shake = 0;
 let cinematic = false, cinematicTime = 0, cinematicDone = false;
@@ -122,6 +128,14 @@ function attack(){
   if(!running||paused||player.cooldown>0||player.stamina<16||gameEnded)return;
   player.attack=.19;player.cooldown=.38;player.stamina-=16;shake=4;
   audio.sfx("swing");
+  if(typeof PixelFX.createFx==="function"){
+    const angle=player.faceX===-1?Math.PI:player.faceY===1?Math.PI/2:player.faceY===-1?-Math.PI/2:0;
+    fxList.push(PixelFX.createFx(SwordSlash,{
+      x:player.x-6,y:player.y+26,angle,seed:Math.floor(elapsed*1000)%9999,
+      palette:["#34191e","#672d35","#963e45","#c65b5c","#df8c7e","#f0c5ac","#fff0dc"],
+      sparks:["#fff0d5","#e8ad81","#c65b5c","#7a3038"]
+    }));
+  }
   spawnBurst(player.x+player.faceX*9,player.y+player.faceY*9,"#d9d1b4",6);
   for(const e of enemies){
     const dx=e.x-player.x,dy=e.y-player.y,dist=Math.hypot(dx,dy);
@@ -186,6 +200,8 @@ function update(dt){
   if(ambientRoarTimer<=0 && enemies.some(e=>Math.hypot(e.x-player.x,e.y-player.y)<125)){
     audio.sfx("monster");ambientRoarTimer=7+rnd(0,5);
   }
+  for(const fx of fxList)fx.update(dt);
+  fxList=fxList.filter(fx=>!fx.done());
   for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=55*dt;p.life-=dt;}
   particles=particles.filter(p=>p.life>0);
   updateUI();
@@ -202,6 +218,13 @@ function render(){
     ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);
   }
   pickups.forEach(drawPickup);enemies.forEach(drawEnemy);drawPlayer();
+  if(fxList.length&&buffer&&typeof PixelFX.composite==="function"){
+    PixelFX.clearFrame(buffer);
+    for(const fx of fxList)fx.draw(buffer);
+    PixelFX.composite(buffer,effectImage.data,null);
+    effectCtx.putImageData(effectImage,0,0);
+    ctx.drawImage(effectCanvas,0,0);
+  }
   for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);rect(p.x,p.y,p.size,p.size,p.color);}ctx.globalAlpha=1;
   // vignette and subtle pixel grain
   const v=ctx.createRadialGradient(W/2,H/2,55,W/2,H/2,245);v.addColorStop(0,"rgba(0,0,0,0)");v.addColorStop(1,"rgba(0,0,0,.58)");ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
