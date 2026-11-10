@@ -7,7 +7,7 @@ An unofficial, fan-made pixel-art survival horror browser game inspired by the K
 - A title screen with New Game, Settings and How to Play; the game never starts automatically.
 - An animated opening sequence with a skip option.
 - Pixel-art top-down survival gameplay with pursuing infected, combat, health, stamina, first aid and three required supplies.
-- A clear chapter-complete condition and separate victory / game-over screens.
+- A playable first-chapter loop: collect three supplies, unlock the stairwell, and reach the exit; separate victory / game-over screens.
 - Synthesized original sound effects and atmospheric audio generated in the browser using the Web Audio API. No external audio files, API keys or audio hosting are needed.
 - Master-volume and mute controls, persisted in the browser.
 - Mobile virtual joystick with dedicated RUN, STEALTH, ATTACK, USE, LIGHT and PAUSE controls.
@@ -16,7 +16,7 @@ An unofficial, fan-made pixel-art survival horror browser game inspired by the K
 - Infected react to sound and distance: sprinting attracts them from farther away, while crouching reduces detection range. Low-health heartbeat, breathing and footstep cues deepen the atmosphere.
 - Touch controls for phones and tablets, plus keyboard controls for desktop.
 - Vite build output configured for Cloudflare Pages.
-- PixelFX-powered animated melee slash effects, composited on a transparent effects layer.
+- PixelFX-powered blunt-impact effects on successful pipe hits, composited on a transparent effects layer.
 
 ## Controls
 
@@ -72,4 +72,4 @@ All sound is synthesized at runtime. Browsers require a user gesture before audi
 
 ## Credits and rights
 
-Uses [pixelfx](https://github.com/patch-gg/pixelfx) as an open-source effects library. Game-specific placeholder art and synthesized audio are original code. *Sweet Home*, its story, and its characters belong to their respective rights holders.
+Uses [pixelfx](https://github.com/patch-gg/pixelfx) as an open-source effects library. Game-specific procedural pixel art and synthesized audio are original code. *Sweet Home*, its story, and its characters belong to their respective rights holders.
