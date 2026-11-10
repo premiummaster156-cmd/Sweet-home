@@ -13,6 +13,7 @@ An unofficial, fan-made pixel-art survival horror browser game inspired by the K
 - Mobile virtual joystick with dedicated RUN, STEALTH, ATTACK, USE, LIGHT and PAUSE controls.
 - PC controls for sprinting (Shift), crouching (C) and flashlight (F); sprinting drains stamina and makes more noise, while crouching reduces detection range.
 - Flashlight beam and rechargeable battery display, plus stamina-based movement feedback.
+- Infected react to sound and distance: sprinting attracts them from farther away, while crouching reduces detection range. Low-health heartbeat, breathing and footstep cues deepen the atmosphere.
 - Touch controls for phones and tablets, plus keyboard controls for desktop.
 - Vite build output configured for Cloudflare Pages.
 - PixelFX-powered animated melee slash effects, composited on a transparent effects layer.
