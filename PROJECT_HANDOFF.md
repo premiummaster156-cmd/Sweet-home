@@ -33,6 +33,7 @@ Work is on the review branch `fix/m0-playable-chapter`. The production branch `m
 - No iPhone or Android physical-device test has been completed.
 - Attack range, enemy/furniture navigation, item pickup reach, stairwell interaction, and full win/loss flow still need hands-on browser QA.
 - Collision geometry is a first-pass static rectangle map, not a general map editor or navigation mesh.
+- A static grid reachability check from the spawn position found paths to all four pickups, the stairwell interaction point, and the open exit lane; this is a geometry check, not a live gameplay test.
 - The frame error guard prevents the RAF loop from silently terminating but it does not make an underlying gameplay exception harmless; any caught runtime error still pauses gameplay and needs fixing.
 - A lockfile has not yet been generated; PixelFX is pinned, but dependency installation is not yet fully lockfile-reproducible.
 
