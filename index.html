@@ -4,8 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#090b0c" />
-    <meta name="description" content="Survive the outbreak in Green Home. A pixel-art survival horror game." />
-    <title>SWEET HOME — Green Home</title>
+    <meta name="description" content="Enter Green Home, explore, survive the infected, and uncover the horror in an original pixel-art survival game." />
+    <meta name="color-scheme" content="dark" />
+    <title>SWEET HOME — Green Home Survival</title>
   </head>
   <body>
     <div id="app">
@@ -20,11 +21,42 @@
           <div class="canvas-frame">
             <canvas id="game" width="480" height="270" aria-label="Sweet Home pixel survival game"></canvas>
             <div class="scanlines"></div>
-            <div id="cinematic" class="cinematic-layer">
+            <div id="cinematic" class="cinematic-layer hidden">
               <div class="cinematic-top"><span id="cinematic-caption">SEPTEMBER 2020 · UNKNOWN LOCATION</span><span class="cinematic-mark">S/H · CHAPTER 01</span></div>
               <button id="skip-cinematic" class="skip-cinematic" type="button">SKIP INTRO <span>↗</span></button>
             </div>
-            <div id="intro" class="overlay">
+            <div id="main-menu" class="overlay main-menu">
+              <div class="menu-card">
+                <div class="menu-kicker">A PIXEL SURVIVAL HORROR EXPERIENCE</div>
+                <div class="menu-logo"><span>SWEET</span><b>HOME</b></div>
+                <div class="menu-chapter">GREEN HOME <i>·</i> CHAPTER 01</div>
+                <p class="menu-copy">THE WALLS ARE THIN. THE NIGHT IS LONG. STAY ALIVE.</p>
+                <div id="menu-actions" class="menu-actions">
+                  <button id="new-game" class="primary" type="button">NEW GAME <span>↗</span></button>
+                  <div class="menu-secondary">
+                    <button id="open-settings" type="button">SETTINGS</button>
+                    <button id="open-controls" type="button">HOW TO PLAY</button>
+                  </div>
+                </div>
+                <div id="settings-panel" class="menu-subpanel hidden">
+                  <div class="subpanel-heading">AUDIO SETTINGS</div>
+                  <label class="volume-label" for="master-volume"><span>MASTER VOLUME</span><b>WEB AUDIO</b></label>
+                  <input id="master-volume" class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.62" />
+                  <button id="mute-audio" class="menu-outline" type="button">SOUND ON</button>
+                  <button id="settings-back" class="menu-back" type="button">← BACK</button>
+                </div>
+                <div id="controls-panel" class="menu-subpanel hidden">
+                  <div class="subpanel-heading">SURVIVAL CONTROLS</div>
+                  <div class="control-line"><kbd>W A S D</kbd><span>MOVE</span></div>
+                  <div class="control-line"><kbd>SPACE</kbd><span>PIPE ATTACK</span></div>
+                  <div class="control-line"><kbd>E</kbd><span>COLLECT / USE / EXIT</span></div>
+                  <div class="control-line"><kbd>P / ESC</kbd><span>PAUSE</span></div>
+                  <button id="controls-back" class="menu-back" type="button">← BACK</button>
+                </div>
+                <div class="menu-footnote">UNOFFICIAL FAN-MADE PROJECT <span>·</span> ORIGINAL SYNTHESIZED AUDIO</div>
+              </div>
+            </div>
+            <div id="intro" class="overlay hidden">
               <div class="intro-card">
                 <div class="warning">⚠ EMERGENCY BROADCAST · 06:42 AM</div>
                 <div class="title-small">THE WORLD OUTSIDE IS</div>
@@ -35,11 +67,28 @@
               </div>
             </div>
             <div id="gameover" class="overlay hidden">
-              <div class="intro-card"><div class="warning">SIGNAL LOST</div><h2>YOU DIDN'T<br/><em>MAKE IT.</em></h2><p>The residents will remember.</p><button id="retry" class="primary">TRY AGAIN ↻</button></div>
+              <div class="intro-card"><div class="warning">SIGNAL LOST</div><h2>YOU DIDN'T<br/><em>MAKE IT.</em></h2><p>The residents will remember.</p><button id="retry" class="primary" type="button">TRY AGAIN ↻</button><button id="game-menu" class="menu-back" type="button">RETURN TO MAIN MENU</button></div>
             </div>
-            <div id="pause" class="pause hidden">PAUSED <span>PRESS P TO RETURN</span></div>
+            <div id="pause" class="pause hidden">
+              <div>PAUSED</div><span>PRESS P OR ESC TO RESUME</span>
+              <button id="return-menu" class="menu-outline pause-menu-button" type="button">MAIN MENU</button>
+            </div>
+            <div id="victory" class="overlay hidden">
+              <div class="intro-card"><div class="warning">SURVIVOR SIGNAL RESTORED</div><h2>YOU MADE<br/><em>IT OUT.</em></h2><p>You secured the supplies and reached the stairwell. The next chapter is waiting.</p><button id="victory-menu" class="primary" type="button">RETURN TO MAIN MENU <span>↗</span></button></div>
+            </div>
             <div class="hud-top"><span>FLOOR <b id="floor">03</b></span><span>THREAT LEVEL <b class="threat">ELEVATED</b></span></div>
             <div class="hud-bottom"><span>OBJECTIVE <b id="objective">Find a way out</b></span><span id="status">EXPLORING</span></div>
+          </div>
+          <div class="touch-controls" aria-label="Touch game controls">
+            <div class="touch-pad">
+              <span></span><button data-touch-key="w" type="button" aria-label="Move up">▲</button><span></span>
+              <button data-touch-key="a" type="button" aria-label="Move left">◀</button><span></span><button data-touch-key="d" type="button" aria-label="Move right">▶</button>
+              <span></span><button data-touch-key="s" type="button" aria-label="Move down">▼</button><span></span>
+            </div>
+            <div class="touch-actions">
+              <button id="touch-attack" type="button">ATTACK</button>
+              <button id="touch-interact" type="button">INTERACT</button>
+            </div>
           </div>
           <div class="underbar"><div class="legend"><span><kbd>W A S D</kbd> MOVE</span><span><kbd>SPACE</kbd> ATTACK</span><span><kbd>E</kbd> INTERACT</span><span><kbd>P</kbd> PAUSE</span></div><div class="pixel-tag"><span></span> PIXEL SURVIVAL RPG</div></div>
         </section>
