@@ -52,8 +52,10 @@
 @media(max-width:420px){
   .menu-card{padding:20px 20px 15px}
   .menu-logo{font-size:52px}
+  .touch-controls{gap:8px;padding:10px 8px}
   .touch-pad{grid-template-columns:repeat(3,32px);grid-template-rows:repeat(3,30px)}
-  .touch-actions button{min-width:58px;padding:0 7px}
+  .touch-actions{gap:5px;min-width:0}
+  .touch-actions button{min-width:0;flex:1;padding:0 4px;font-size:7px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
