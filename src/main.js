@@ -403,8 +403,11 @@ function render(){
   // dark pools at the edge of the room
   ctx.fillStyle="rgba(0,0,0,.20)";ctx.fillRect(0,0,W,H);
   // light pools
-  for(const [x,y,r] of [[78,48,25],[395,48,22]]){
-    const g=ctx.createRadialGradient(x,y,2,x,y,r);g.addColorStop(0,"rgba(160,164,130,.12)");g.addColorStop(1,"rgba(0,0,0,0)");
+  const fixtureFlicker=.88+Math.sin(elapsed*7)*.035+Math.sin(elapsed*19)*.018;
+  for(const [x,y,r] of [[132,72,34],[348,72,31],[231,70,19]]){
+    const g=ctx.createRadialGradient(x,y,2,x,y,r);
+    g.addColorStop(0,"rgba(170,157,116,"+(.12*fixtureFlicker)+")");
+    g.addColorStop(1,"rgba(0,0,0,0)");
     ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);
   }
   if(player.flashlight&&player.lightBattery>0){
