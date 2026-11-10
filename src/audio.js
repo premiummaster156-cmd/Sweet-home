@@ -168,6 +168,10 @@ export function createAudioEngine() {
         noise(0.65, 0.045, 600);
         tone(92, 0.55, "sine", 0.018, 62);
         break;
+      case "heartbeat":
+        tone(58, 0.10, "sine", 0.065, 42);
+        tone(49, 0.13, "sine", 0.052, 36, 0.18);
+        break;
       case "swing":
         noise(0.16, 0.07, 1900);
         tone(250, 0.14, "triangle", 0.035, 90);
