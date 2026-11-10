@@ -24,7 +24,7 @@ const ui = {
   status: document.querySelector("#status"), cinematic: document.querySelector("#cinematic"), caption: document.querySelector("#cinematic-caption"), skip: document.querySelector("#skip-cinematic"), frame: document.querySelector(".canvas-frame"),
   menu: document.querySelector("#main-menu"), settings: document.querySelector("#settings-panel"), controls: document.querySelector("#controls-panel"),
   menuActions: document.querySelector("#menu-actions"), volume: document.querySelector("#master-volume"), mute: document.querySelector("#mute-audio"),
-  victory: document.querySelector("#victory")
+  victory: document.querySelector("#victory"), touchControls: document.querySelector("#touch-controls")
 };
 const clamp = (n,a,b) => Math.max(a, Math.min(b,n));
 const rnd = (a,b) => a + Math.random() * (b-a);
@@ -140,7 +140,7 @@ function interact(){
   if(Math.hypot(456-p.x,137-p.y)<29){
     if(objectiveProgress>=3){
       ui.objective.textContent="Chapter complete";ui.status.textContent="CHAPTER COMPLETE";
-      gameEnded=true;running=false;ui.victory.classList.remove("hidden");audio.sfx("victory");audio.scene("menu");return;
+      gameEnded=true;running=false;ui.victory.classList.remove("hidden");ui.touchControls.classList.add("hidden");audio.sfx("victory");audio.scene("menu");return;
     }
     ui.status.textContent="EXIT LOCKED · FIND ALL 3 SUPPLIES";
   } else if(medkits>0&&p.hp<75){medkits--;p.hp=Math.min(100,p.hp+35);ui.status.textContent="FIRST AID USED";audio.sfx("heal");updateUI();}
@@ -179,7 +179,7 @@ function update(dt){
     else if(player.invuln<=0){
       player.hp=Math.max(0,player.hp-9);player.invuln=.62;shake=3;
       spawnBurst(player.x,player.y,"#9b3c3c",5);audio.sfx("hurt");
-      if(player.hp<=0){gameEnded=true;running=false;ui.gameover.classList.remove("hidden");audio.sfx("death");audio.scene("menu");}
+      if(player.hp<=0){gameEnded=true;running=false;ui.gameover.classList.remove("hidden");ui.touchControls.classList.add("hidden");audio.sfx("death");audio.scene("menu");}
     }
   }
   for(const p of pickups) if(!p.taken&&Math.hypot(p.x-player.x,p.y-player.y)<13)ui.status.textContent="ITEM NEARBY · PRESS E";
@@ -391,18 +391,20 @@ function frame(now){
 document.querySelector("#start").addEventListener("click",()=>{
   audio.unlock();audio.sfx("confirm");reset();running=true;paused=false;
   ui.intro.classList.add("hidden");ui.gameover.classList.add("hidden");ui.victory.classList.add("hidden");
+  ui.touchControls.classList.remove("hidden");
   audio.scene("game");last=performance.now();
 });
 document.querySelector("#new-game").addEventListener("click",startCinematic);
 document.querySelector("#skip-cinematic").addEventListener("click",finishCinematic);
 document.querySelector("#retry").addEventListener("click",()=>{
   audio.unlock();reset();running=true;paused=false;ui.intro.classList.add("hidden");
-  ui.gameover.classList.add("hidden");ui.victory.classList.add("hidden");audio.scene("game");last=performance.now();
+  ui.gameover.classList.add("hidden");ui.victory.classList.add("hidden");ui.touchControls.classList.remove("hidden");
+  audio.scene("game");last=performance.now();
 });
 function returnToMenu(){
   running=false;paused=false;cinematic=false;keys.clear();
   ui.pause.classList.add("hidden");ui.intro.classList.add("hidden");
-  ui.gameover.classList.add("hidden");ui.victory.classList.add("hidden");
+  ui.gameover.classList.add("hidden");ui.victory.classList.add("hidden");ui.touchControls.classList.add("hidden");
   ui.cinematic.classList.add("hidden");ui.menu.classList.remove("hidden");
   ui.frame.classList.add("cinematic-mode");audio.scene("menu");
 }
