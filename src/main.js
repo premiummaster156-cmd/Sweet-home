@@ -16,7 +16,7 @@ const effectImage = effectCtx.createImageData(W, H);
 const audio = createAudioEngine();
 let running = false, paused = false, last = 0, elapsed = 0, shake = 0;
 let cinematic = false, cinematicTime = 0, cinematicDone = false;
-let footstepTimer = 0, ambientRoarTimer = 5, cinematicGunPlayed = false;
+let footstepTimer = 0, ambientRoarTimer = 5, cinematicGunPlayed = false, heartbeatTimer = 0;
 let touchMove = {x:0,y:0};
 let stickPointer = null;
 const snow = Array.from({length:95},(_,i)=>({x:(i*53)%W,y:(i*37)%H,s:1+(i%3===0?1:0),v:12+(i%7)*4,drift:((i%5)-2)*2}));
@@ -43,7 +43,7 @@ const clamp = (n,a,b) => Math.max(a, Math.min(b,n));
 const rnd = (a,b) => a + Math.random() * (b-a);
 function reset() {
   player = {x:76,y:136,r:5,hp:100,stamina:100,faceX:1,faceY:0,attack:0,cooldown:0,invuln:0,crouched:false,flashlight:true,lightBattery:100};
-  enemies = [{x:342,y:104,hp:3,speed:13,hit:0},{x:396,y:195,hp:3,speed:10,hit:0},{x:268,y:223,hp:2,speed:15,hit:0}];
+  enemies = [{x:342,y:104,hp:3,speed:27,hit:0,alertTimer:0},{x:396,y:195,hp:3,speed:24,hit:0,alertTimer:0},{x:268,y:223,hp:2,speed:30,hit:0,alertTimer:0}];
   pickups = [
     {x:125,y:70,type:"med",taken:false},
     {x:220,y:185,type:"supply",taken:false},
@@ -51,7 +51,7 @@ function reset() {
     {x:370,y:225,type:"supply",taken:false}
   ];
   doors = [{x:454,y:137,open:false}]; fxList=[]; particles=[]; objectiveProgress=0; medkits=1; gameEnded=false;
-  touchMove={x:0,y:0};stickPointer=null;footstepTimer=0;ambientRoarTimer=5;
+  touchMove={x:0,y:0};stickPointer=null;footstepTimer=0;ambientRoarTimer=5;heartbeatTimer=0;
   ui.gameover.classList.add("hidden"); ui.victory.classList.add("hidden"); updateUI();
 }
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
@@ -93,13 +93,19 @@ function drawFloor(){
   // hazard stripes
   for(let x=432;x<452;x+=6){line(x,111,x+5,106,"#8d6539");}
 }
+function movingForSprite(p){return p.sprinting||Math.abs(p.x-p.prevX||0)>.01||Math.abs(p.y-p.prevY||0)>.01;}
 function drawPlayer(){
-  const p=player; const x=Math.round(p.x),y=Math.round(p.y);
+  const p=player;
+  const x=Math.round(p.x);
+  const phase=elapsed*(p.sprinting?18:p.crouched?4:10);
+  const bob=(Math.sin(phase)*(p.crouched?.25:p.sprinting?1.15:.65))+(p.crouched?1:0);
+  const y=Math.round(p.y+bob);
+  const legSwing=movingForSprite(p)?Math.round(Math.sin(phase)* (p.sprinting?2:1)):0;
   // shadow
   rect(x-6,y+5,12,3,"#101313");
   if(p.invuln>0 && Math.floor(elapsed*14)%2===0) return;
   // feet, dark trousers, jacket, face, hair
-  rect(x-4,y+2,3,5,"#252b31");rect(x+1,y+2,3,5,"#252b31");
+  rect(x-4,y+2+legSwing,3,5,"#252b31");rect(x+1,y+2-legSwing,3,5,"#252b31");
   rect(x-5,y-5,10,9,"#6b7470");rect(x-4,y-4,8,7,"#858b7e");
   rect(x-3,y-8,6,5,"#b38d6b");rect(x-4,y-10,8,4,"#202426");
   rect(x-5,y-9,3,3,"#202426");rect(x+2,y-9,3,2,"#202426");
@@ -196,6 +202,7 @@ function update(dt){
   const moving=!!(dx||dy),magnitude=Math.hypot(dx,dy);
   if(magnitude>1){dx/=magnitude;dy/=magnitude;}
   const sprinting=keys.has("shift")&&!player.crouched&&moving&&player.stamina>1;
+  player.sprinting=!!sprinting;
   if(sprinting)player.stamina=Math.max(0,player.stamina-dt*30);
   else player.stamina=clamp(player.stamina+dt*(player.crouched?15:12),0,100);
   if(player.stamina<=0&&sprinting){keys.delete("shift");audio.sfx("breath");}
@@ -212,7 +219,7 @@ function update(dt){
     ui.status.textContent=sprinting?"RUNNING · MAKING NOISE":player.crouched?"CROUCHING · QUIET":"MOVING CAREFULLY";
     if(footstepTimer<=0){
       audio.sfx(sprinting?"heavy-step":player.crouched?"soft-step":"footstep");
-      footstepTimer=sprinting?.22:player.crouched?.58:.38;
+      footstepTimer=sprinting ? 0.22 : player.crouched ? 0.58 : 0.38;
     }
   }
   player.x=clamp(player.x,15,445);player.y=clamp(player.y,26,244);
@@ -239,6 +246,9 @@ function update(dt){
   if(ambientRoarTimer<=0&&enemies.some(e=>Math.hypot(e.x-player.x,e.y-player.y)<150)){
     audio.sfx("monster");ambientRoarTimer=7+rnd(0,5);
   }
+  heartbeatTimer-=dt;
+  if(player.hp<=32&&heartbeatTimer<=0){audio.sfx("heartbeat");heartbeatTimer=1.05;}
+  if(player.hp>32)heartbeatTimer=0;
   for(const fx of fxList)fx.update(dt);
   fxList=fxList.filter(fx=>!fx.done());
   for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=55*dt;p.life-=dt;}
@@ -278,6 +288,7 @@ function render(){
   for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);rect(p.x,p.y,p.size,p.size,p.color);}ctx.globalAlpha=1;
   // vignette and subtle pixel grain
   const v=ctx.createRadialGradient(W/2,H/2,55,W/2,H/2,245);v.addColorStop(0,"rgba(0,0,0,0)");v.addColorStop(1,"rgba(0,0,0,.58)");ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+  if(player.hp<35){const pulse=(Math.sin(elapsed*5)+1)/2;ctx.fillStyle="rgba(108,12,15,"+(.025+pulse*.055)+")";ctx.fillRect(0,0,W,H);}
   ctx.restore();
   if(shake>0)shake=Math.max(0,shake-.45);
   // Reuse pixelfx's framebuffer for future effect layers; clearing it is allocation-free.
@@ -526,7 +537,11 @@ window.addEventListener("keydown",e=>{
   if(k==="f"&&!e.repeat)toggleFlashlight();
 });
 window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
-window.addEventListener("blur",()=>keys.clear());
+window.addEventListener("blur",()=>{
+  keys.clear();touchMove={x:0,y:0};stickPointer=null;
+  if(ui.stickKnob)ui.stickKnob.style.transform="translate(0,0)";
+  if(ui.touchSprint)ui.touchSprint.classList.remove("is-active");
+});
 document.querySelectorAll("[data-touch-key]").forEach(button=>{
   const key=button.dataset.touchKey;
   button.addEventListener("pointerdown",e=>{e.preventDefault();keys.add(key);button.setPointerCapture?.(e.pointerId);});
