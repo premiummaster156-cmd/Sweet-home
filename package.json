@@ -10,7 +10,7 @@
     "dev:pages": "npm run build && npx wrangler pages dev dist"
   },
   "dependencies": {
-    "pixelfx": "github:patch-gg/pixelfx"
+    "pixelfx": "github:patch-gg/pixelfx#044e12a45dc9cc312cec50ee606dfc98afe5adc2"
   },
   "devDependencies": {
     "vite": "^6.3.5"
