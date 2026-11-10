@@ -17,6 +17,8 @@ const audio = createAudioEngine();
 let running = false, paused = false, last = 0, elapsed = 0, shake = 0;
 let cinematic = false, cinematicTime = 0, cinematicDone = false;
 let footstepTimer = 0, ambientRoarTimer = 5, cinematicGunPlayed = false;
+let touchMove = {x:0,y:0};
+let stickPointer = null;
 const snow = Array.from({length:95},(_,i)=>({x:(i*53)%W,y:(i*37)%H,s:1+(i%3===0?1:0),v:12+(i%7)*4,drift:((i%5)-2)*2}));
 let keys = new Set(), fxList = [], particles = [];
 let player, enemies, pickups, doors, blood, objectiveProgress, medkits, gameEnded;
@@ -30,12 +32,17 @@ const ui = {
   status: document.querySelector("#status"), cinematic: document.querySelector("#cinematic"), caption: document.querySelector("#cinematic-caption"), skip: document.querySelector("#skip-cinematic"), frame: document.querySelector(".canvas-frame"),
   menu: document.querySelector("#main-menu"), settings: document.querySelector("#settings-panel"), controls: document.querySelector("#controls-panel"),
   menuActions: document.querySelector("#menu-actions"), volume: document.querySelector("#master-volume"), mute: document.querySelector("#mute-audio"),
-  victory: document.querySelector("#victory"), touchControls: document.querySelector("#touch-controls")
+  victory: document.querySelector("#victory"), touchControls: document.querySelector("#touch-controls"),
+  posture: document.querySelector("#posture-status"), light: document.querySelector("#light-status"),
+  lightBar: document.querySelector("#light-battery"), touchMode: document.querySelector("#touch-mode"),
+  stick: document.querySelector("#virtual-stick"), stickKnob: document.querySelector("#stick-knob"),
+  touchSprint: document.querySelector("#touch-sprint"), touchCrouch: document.querySelector("#touch-crouch"),
+  touchLight: document.querySelector("#touch-light")
 };
 const clamp = (n,a,b) => Math.max(a, Math.min(b,n));
 const rnd = (a,b) => a + Math.random() * (b-a);
 function reset() {
-  player = {x:76,y:136,r:5,hp:100,stamina:100,faceX:1,faceY:0,attack:0,cooldown:0,invuln:0};
+  player = {x:76,y:136,r:5,hp:100,stamina:100,faceX:1,faceY:0,attack:0,cooldown:0,invuln:0,crouched:false,flashlight:true,lightBattery:100};
   enemies = [{x:342,y:104,hp:3,speed:13,hit:0},{x:396,y:195,hp:3,speed:10,hit:0},{x:268,y:223,hp:2,speed:15,hit:0}];
   pickups = [
     {x:125,y:70,type:"med",taken:false},
@@ -44,7 +51,7 @@ function reset() {
     {x:370,y:225,type:"supply",taken:false}
   ];
   doors = [{x:454,y:137,open:false}]; fxList=[]; particles=[]; objectiveProgress=0; medkits=1; gameEnded=false;
-  footstepTimer=0; ambientRoarTimer=5;
+  touchMove={x:0,y:0};stickPointer=null;footstepTimer=0;ambientRoarTimer=5;
   ui.gameover.classList.add("hidden"); ui.victory.classList.add("hidden"); updateUI();
 }
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
@@ -168,36 +175,68 @@ function updateUI(){
   ui.progress.style.width=(objectiveProgress/3*100)+"%";
   ui.progressText.textContent=objectiveProgress+" / 3 SUPPLIES FOUND";
   ui.objective.textContent=objectiveProgress>=3?"Reach the exit":"Find supplies ("+objectiveProgress+"/3)";
+  if(ui.posture)ui.posture.textContent=player.crouched?"CROUCHING":(keys.has("shift")&&player.stamina>0?"SPRINTING":"WALKING");
+  if(ui.light)ui.light.textContent=player.flashlight?"FLASHLIGHT ON":"FLASHLIGHT OFF";
+  if(ui.lightBar)ui.lightBar.style.width=player.lightBattery+"%";
+  if(ui.touchMode)ui.touchMode.textContent=player.crouched?"STEALTH":(keys.has("shift")&&player.stamina>0?"RUN":"WALK");
+  if(ui.touchCrouch)ui.touchCrouch.classList.toggle("is-active",player.crouched);
+  if(ui.touchLight)ui.touchLight.classList.toggle("is-active",player.flashlight);
 }
 function update(dt){
   elapsed+=dt;
-  if(player.cooldown>0)player.cooldown-=dt;if(player.attack>0)player.attack-=dt;if(player.invuln>0)player.invuln-=dt;
-  player.stamina=clamp(player.stamina+dt*10,0,100);
+  if(player.cooldown>0)player.cooldown-=dt;
+  if(player.attack>0)player.attack-=dt;
+  if(player.invuln>0)player.invuln-=dt;
   let dx=0,dy=0;
-  if(keys.has("w")||keys.has("arrowup"))dy--;if(keys.has("s")||keys.has("arrowdown"))dy++;
-  if(keys.has("a")||keys.has("arrowleft"))dx--;if(keys.has("d")||keys.has("arrowright"))dx++;
+  if(keys.has("w")||keys.has("arrowup"))dy--;
+  if(keys.has("s")||keys.has("arrowdown"))dy++;
+  if(keys.has("a")||keys.has("arrowleft"))dx--;
+  if(keys.has("d")||keys.has("arrowright"))dx++;
+  dx+=touchMove.x;dy+=touchMove.y;
+  const moving=!!(dx||dy),magnitude=Math.hypot(dx,dy);
+  if(magnitude>1){dx/=magnitude;dy/=magnitude;}
+  const sprinting=keys.has("shift")&&!player.crouched&&moving&&player.stamina>1;
+  if(sprinting)player.stamina=Math.max(0,player.stamina-dt*30);
+  else player.stamina=clamp(player.stamina+dt*(player.crouched?15:12),0,100);
+  if(player.stamina<=0&&sprinting){keys.delete("shift");audio.sfx("breath");}
+  if(player.flashlight&&player.lightBattery>0)player.lightBattery=Math.max(0,player.lightBattery-dt*.32);
+  else player.lightBattery=clamp(player.lightBattery+dt*.9,0,100);
+  if(player.lightBattery<=0&&player.flashlight){player.flashlight=false;audio.sfx("light-click");}
   footstepTimer=Math.max(0,footstepTimer-dt);
   ambientRoarTimer-=dt;
-  if(dx||dy){
-    const m=Math.hypot(dx,dy);dx/=m;dy/=m;
-    player.x+=dx*65*dt;player.y+=dy*65*dt;
-    if(Math.abs(dx)>Math.abs(dy))player.faceX=Math.sign(dx),player.faceY=0;else player.faceY=Math.sign(dy),player.faceX=0;
-    ui.status.textContent="MOVING QUIETLY";
-    if(footstepTimer<=0){audio.sfx("footstep");footstepTimer=.36;}
+  if(moving){
+    const speed=sprinting?116:(player.crouched?34:65);
+    player.x+=dx*speed*dt;player.y+=dy*speed*dt;
+    if(Math.abs(dx)>Math.abs(dy))player.faceX=Math.sign(dx),player.faceY=0;
+    else player.faceY=Math.sign(dy),player.faceX=0;
+    ui.status.textContent=sprinting?"RUNNING · MAKING NOISE":player.crouched?"CROUCHING · QUIET":"MOVING CAREFULLY";
+    if(footstepTimer<=0){
+      audio.sfx(sprinting?"heavy-step":player.crouched?"soft-step":"footstep");
+      footstepTimer=sprinting?.22:player.crouched?.58:.38;
+    }
   }
   player.x=clamp(player.x,15,445);player.y=clamp(player.y,26,244);
   for(const e of enemies){
     e.hit=Math.max(0,e.hit-dt);
     const ex=player.x-e.x,ey=player.y-e.y,d=Math.hypot(ex,ey);
-    if(d>13){e.x+=ex/(d||1)*e.speed*dt;e.y+=ey/(d||1)*e.speed*dt;}
-    else if(player.invuln<=0){
-      player.hp=Math.max(0,player.hp-9);player.invuln=.62;shake=3;
-      spawnBurst(player.x,player.y,"#9b3c3c",5);audio.sfx("hurt");
-      if(player.hp<=0){gameEnded=true;running=false;ui.gameover.classList.remove("hidden");ui.touchControls.classList.add("hidden");audio.sfx("death");audio.scene("menu");}
+    const hearingRange=sprinting?278:player.crouched?72:172;
+    e.alertTimer=Math.max(0,(e.alertTimer||0)-dt);
+    if(d<hearingRange)e.alertTimer=3.2;
+    if(e.alertTimer>0){
+      const speed=e.speed*(sprinting?1.18:1);
+      if(d>13){e.x+=ex/(d||1)*speed*dt;e.y+=ey/(d||1)*speed*dt;}
+      else if(player.invuln<=0){
+        player.hp=Math.max(0,player.hp-9);player.invuln=.62;shake=3;
+        spawnBurst(player.x,player.y,"#9b3c3c",5);audio.sfx("hurt");
+        if(player.hp<=0){gameEnded=true;running=false;ui.gameover.classList.remove("hidden");ui.touchControls.classList.add("hidden");audio.sfx("death");audio.scene("menu");}
+      }
+    }else{
+      e.x+=Math.sin(elapsed*.7+e.y)*.12;
+      e.y+=Math.cos(elapsed*.55+e.x)*.10;
     }
   }
-  for(const p of pickups) if(!p.taken&&Math.hypot(p.x-player.x,p.y-player.y)<13)ui.status.textContent="ITEM NEARBY · PRESS E";
-  if(ambientRoarTimer<=0 && enemies.some(e=>Math.hypot(e.x-player.x,e.y-player.y)<125)){
+  for(const p of pickups)if(!p.taken&&Math.hypot(p.x-player.x,p.y-player.y)<13)ui.status.textContent="ITEM NEARBY · PRESS E";
+  if(ambientRoarTimer<=0&&enemies.some(e=>Math.hypot(e.x-player.x,e.y-player.y)<150)){
     audio.sfx("monster");ambientRoarTimer=7+rnd(0,5);
   }
   for(const fx of fxList)fx.update(dt);
@@ -213,9 +252,20 @@ function render(){
   // dark pools at the edge of the room
   ctx.fillStyle="rgba(0,0,0,.20)";ctx.fillRect(0,0,W,H);
   // light pools
-  for(const [x,y,r] of [[player.x,player.y,68],[78,48,25],[395,48,22]]){
+  for(const [x,y,r] of [[78,48,25],[395,48,22]]){
     const g=ctx.createRadialGradient(x,y,2,x,y,r);g.addColorStop(0,"rgba(160,164,130,.12)");g.addColorStop(1,"rgba(0,0,0,0)");
     ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);
+  }
+  if(player.flashlight&&player.lightBattery>0){
+    const angle=Math.atan2(player.faceY,player.faceX),range=118;
+    const cone=ctx.createRadialGradient(player.x,player.y,5,player.x,player.y,range);
+    cone.addColorStop(0,"rgba(202,205,170,.30)");cone.addColorStop(.65,"rgba(176,187,159,.12)");cone.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.save();ctx.globalCompositeOperation="screen";ctx.beginPath();ctx.moveTo(player.x,player.y);
+    ctx.arc(player.x,player.y,range,angle-.52,angle+.52);ctx.closePath();ctx.fillStyle=cone;ctx.fill();ctx.restore();
+  }else{
+    const g=ctx.createRadialGradient(player.x,player.y,1,player.x,player.y,24);
+    g.addColorStop(0,"rgba(115,126,112,.10)");g.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g;ctx.fillRect(player.x-24,player.y-24,48,48);
   }
   pickups.forEach(drawPickup);enemies.forEach(drawEnemy);drawPlayer();
   if(fxList.length&&buffer&&typeof PixelFX.composite==="function"){
@@ -429,6 +479,17 @@ function togglePause(){
   paused=!paused;ui.pause.classList.toggle("hidden",!paused);
   audio.sfx("menu");audio.scene(paused?"menu":"game");
 }
+function toggleCrouch(){
+  if(!running||paused||gameEnded)return;
+  player.crouched=!player.crouched;
+  if(player.crouched)keys.delete("shift");
+  audio.sfx("soft-step");updateUI();
+}
+function toggleFlashlight(){
+  if(!running||paused||gameEnded||player.lightBattery<=0)return;
+  player.flashlight=!player.flashlight;
+  audio.sfx("light-click");updateUI();
+}
 function returnToMenu(){
   running=false;paused=false;cinematic=false;keys.clear();
   ui.pause.classList.add("hidden");ui.intro.classList.add("hidden");
@@ -461,6 +522,8 @@ window.addEventListener("keydown",e=>{
   if(k===" "&&!e.repeat)attack();
   if(k==="e"&&!e.repeat)interact();
   if((k==="p"||k==="escape")&&running&&!gameEnded)togglePause();
+  if(k==="c"&&!e.repeat)toggleCrouch();
+  if(k==="f"&&!e.repeat)toggleFlashlight();
 });
 window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
 window.addEventListener("blur",()=>keys.clear());
@@ -473,6 +536,37 @@ document.querySelectorAll("[data-touch-key]").forEach(button=>{
 document.querySelector("#touch-attack").addEventListener("pointerdown",e=>{e.preventDefault();attack();});
 document.querySelector("#touch-interact").addEventListener("pointerdown",e=>{e.preventDefault();interact();});
 document.querySelector("#touch-pause").addEventListener("pointerdown",e=>{e.preventDefault();togglePause();});
+document.querySelector("#touch-crouch").addEventListener("pointerdown",e=>{e.preventDefault();toggleCrouch();});
+document.querySelector("#touch-light").addEventListener("pointerdown",e=>{e.preventDefault();toggleFlashlight();});
+ui.touchSprint.addEventListener("pointerdown",e=>{
+  e.preventDefault();if(!running||paused)return;keys.add("shift");ui.touchSprint.classList.add("is-active");
+  ui.touchSprint.setPointerCapture?.(e.pointerId);
+});
+const stopSprint=e=>{if(e)e.preventDefault();keys.delete("shift");ui.touchSprint.classList.remove("is-active");};
+ui.touchSprint.addEventListener("pointerup",stopSprint);
+ui.touchSprint.addEventListener("pointercancel",stopSprint);
+ui.touchSprint.addEventListener("lostpointercapture",stopSprint);
+ui.stick.addEventListener("pointerdown",e=>{
+  if(!running||paused)return;
+  e.preventDefault();stickPointer=e.pointerId;ui.stick.setPointerCapture?.(e.pointerId);moveStick(e);
+});
+function moveStick(e){
+  if(stickPointer!==e.pointerId)return;
+  const r=ui.stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+  let dx=e.clientX-cx,dy=e.clientY-cy;
+  const max=r.width*.32,len=Math.hypot(dx,dy);
+  if(len>max){dx=dx/len*max;dy=dy/len*max;}
+  touchMove={x:dx/max,y:dy/max};
+  ui.stickKnob.style.transform=`translate(${dx}px,${dy}px)`;
+}
+ui.stick.addEventListener("pointermove",moveStick);
+function releaseStick(e){
+  if(stickPointer!==e.pointerId)return;
+  stickPointer=null;touchMove={x:0,y:0};ui.stickKnob.style.transform="translate(0,0)";
+}
+ui.stick.addEventListener("pointerup",releaseStick);
+ui.stick.addEventListener("pointercancel",releaseStick);
+ui.stick.addEventListener("lostpointercapture",releaseStick);
 reset();ui.frame.classList.add("cinematic-mode");ui.cinematic.classList.add("hidden");
 ui.intro.classList.add("hidden");ui.menu.classList.remove("hidden");
 render();requestAnimationFrame(frame);
