@@ -82,7 +82,7 @@ function reset() {
   player = {x:76,y:136,r:5,hp:100,stamina:100,faceX:1,faceY:0,attack:0,cooldown:0,invuln:0,crouched:false,flashlight:true,lightBattery:100};
   enemies = [
     {x:342,y:104,hp:3,speed:27,hit:0,alertTimer:0,variant:0},
-    {x:396,y:195,hp:3,speed:24,hit:0,alertTimer:0,variant:1},
+    {x:374,y:184,hp:3,speed:24,hit:0,alertTimer:0,variant:1},
     {x:268,y:223,hp:2,speed:30,hit:0,alertTimer:0,variant:2}
   ];
   pickups = [
