@@ -1,6 +1,6 @@
 import "./style.css";
 import * as PixelFX from "pixelfx";
-import * as SwordSlash from "pixelfx/fx/melee/sword-slash";
+import * as BluntHit from "pixelfx/fx/impacts/blunt-hit";
 import { createAudioEngine } from "./audio.js";
 
 const canvas = document.querySelector("#game");
@@ -34,13 +34,47 @@ const ui = {
   menuActions: document.querySelector("#menu-actions"), volume: document.querySelector("#master-volume"), mute: document.querySelector("#mute-audio"),
   victory: document.querySelector("#victory"), touchControls: document.querySelector("#touch-controls"),
   posture: document.querySelector("#posture-status"), light: document.querySelector("#light-status"),
-  lightBar: document.querySelector("#light-battery"), touchMode: document.querySelector("#touch-mode"),
+  lightBar: document.querySelector("#light-battery"), lightLabel: document.querySelector("#light-label"),
+  touchMode: document.querySelector("#touch-mode"),
   stick: document.querySelector("#virtual-stick"), stickKnob: document.querySelector("#stick-knob"),
   touchSprint: document.querySelector("#touch-sprint"), touchCrouch: document.querySelector("#touch-crouch"),
   touchLight: document.querySelector("#touch-light")
 };
 const clamp = (n,a,b) => Math.max(a, Math.min(b,n));
 const rnd = (a,b) => a + Math.random() * (b-a);
+
+// First-chapter collision map. Geometry matches the furniture drawn in drawFloor().
+const WORLD_SOLIDS = [
+  {x:15,y:88,w:52,h:28,name:"bench"},
+  {x:16,y:126,w:16,h:22,name:"plant"},
+  {x:106,y:86,w:10,h:21,name:"extinguisher"},
+  {x:354,y:91,w:10,h:23,name:"utility-box"},
+  {x:423,y:86,w:39,h:35,name:"cabinet"},
+  {x:34,y:202,w:31,h:26,name:"chair"},
+  {x:81,y:223,w:21,h:11,name:"cardboard"},
+  {x:391,y:193,w:32,h:24,name:"storage-cabinet"}
+];
+const EXIT_SOLID = {x:448,y:112,w:27,h:50,name:"exit-door"};
+function circleHitsRect(x,y,r,box){
+  const nx=clamp(x,box.x,box.x+box.w),ny=clamp(y,box.y,box.y+box.h);
+  const dx=x-nx,dy=y-ny;
+  return dx*dx+dy*dy<r*r;
+}
+function isWorldBlocked(x,y,r){
+  if(y-r<76||y+r>245||x-r<9)return true;
+  const exitLane=!!doors?.[0]?.open&&y>112+r&&y<162-r;
+  if(x+r>476&&!exitLane)return true;
+  for(const box of WORLD_SOLIDS)if(circleHitsRect(x,y,r,box))return true;
+  if(!doors?.[0]?.open&&circleHitsRect(x,y,r,EXIT_SOLID))return true;
+  return false;
+}
+function moveEntity(entity,dx,dy,r=5){
+  // Axis-separated movement lets characters slide along walls instead of sticking.
+  const nextX=entity.x+dx;
+  if(!isWorldBlocked(nextX,entity.y,r))entity.x=nextX;
+  const nextY=entity.y+dy;
+  if(!isWorldBlocked(entity.x,nextY,r))entity.y=nextY;
+}
 function reset() {
   keys.clear();touchMove={x:0,y:0};stickPointer=null;
   if(ui.stickKnob)ui.stickKnob.style.transform="translate(0,0)";
@@ -201,13 +235,21 @@ function drawFloor(){
     rect(x,y,2+(i%3),1,"#77715e");
     if(i%3===0)rect(x+2,y+1,1,1,"#aea084");
   }
-  // the right-hand exit to the stairwell, framed in battered steel
-  rect(448,112,27,50,"#101614");rect(450,114,23,46,"#55564b");
-  rect(453,117,17,40,"#222a26");rect(456,120,11,34,"#303832");
-  rect(458,122,7,30,"#262e29");rect(464,137,2,3,"#c0a16c");
-  rect(450,109,23,3,"#8b8063");rect(450,161,23,3,"#817861");
-  rect(443,109,4,8,"#756e56");rect(473,110,5,7,"#756e56");
-  text("STAIR",452,104,"#a69b7e");
+  // The stairwell door opens only after all three supplies have been recovered.
+  if(doors?.[0]?.open){
+    rect(448,112,27,50,"#101614");rect(450,114,23,46,"#55564b");
+    rect(453,117,8,40,"#111916");rect(461,117,9,40,"#252d28");
+    rect(463,122,2,30,"#4b5146");rect(456,137,2,3,"#b9a47a");
+    rect(450,109,23,3,"#8b8063");rect(450,161,23,3,"#817861");
+    text("OPEN",452,104,"#c0b28c");
+  }else{
+    rect(448,112,27,50,"#101614");rect(450,114,23,46,"#55564b");
+    rect(453,117,17,40,"#222a26");rect(456,120,11,34,"#303832");
+    rect(458,122,7,30,"#262e29");rect(464,137,2,3,"#c0a16c");
+    rect(450,109,23,3,"#8b8063");rect(450,161,23,3,"#817861");
+    rect(443,109,4,8,"#756e56");rect(473,110,5,7,"#756e56");
+    text("STAIR",452,104,"#a69b7e");
+  }
   // Emergency fixture's dim, warm spill on the floor.
   rect(219,71,24,2,"#4b4638");rect(224,65,14,6,"#171e1a");
   rect(227,67,8,2,"#a38b61");rect(228,67,5,1,"#c1a677");
@@ -313,6 +355,100 @@ function drawPickup(p){
   }
   if(pulse>.82){rect(x-1,y-10,2,2,"#b7a27a");}
 }
+function spawnBurst(x,y,color="#b58c73",count=7){
+  for(let i=0;i<count;i++){
+    const angle=rnd(0,Math.PI*2),speed=rnd(14,58),life=rnd(.16,.42);
+    particles.push({
+      x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-rnd(4,18),
+      size:rnd(1,2.2),color,life,max:life
+    });
+  }
+}
+function completeChapter(){
+  if(gameEnded)return;
+  gameEnded=true;running=false;paused=false;
+  keys.clear();touchMove={x:0,y:0};stickPointer=null;
+  ui.touchControls.classList.add("hidden");
+  ui.victory.classList.remove("hidden");
+  audio.sfx("victory");audio.scene("menu");
+}
+function attack(){
+  if(!running||paused||gameEnded||!player||player.cooldown>0)return;
+  player.attack=.24;player.cooldown=.42;
+  audio.sfx("swing");
+  let connected=false;
+  for(const enemy of [...enemies]){
+    const dx=enemy.x-player.x,dy=enemy.y-player.y,distance=Math.hypot(dx,dy)||1;
+    const facing=(dx/distance)*player.faceX+(dy/distance)*player.faceY;
+    if(distance>34||(facing<.25&&distance>17))continue;
+    connected=true;
+    enemy.hp-=1;enemy.hit=.28;
+    const push=10;
+    moveEntity(enemy,(dx/distance)*push,(dy/distance)*push,7);
+    spawnBurst(enemy.x,enemy.y,"#a66b59",8);
+    // PixelFX's documented standalone blunt impact effect suits the protagonist's pipe weapon.
+    try{
+      if(typeof PixelFX.createFx==="function"){
+        fxList.push(PixelFX.createFx(BluntHit,{
+          x:enemy.x-64,y:enemy.y-72,
+          palette:["#241a1b","#4c3332","#78605a","#a28a79","#c9b5a0","#e7d7c3","#fff2de"],
+          warm:"#9a6a4f",dust:"#82756b",clod:"#5e4b45",height:18,
+          seed:Math.floor(elapsed*1000+enemy.x*17+enemy.y)
+        }));
+      }
+    }catch(error){console.warn("PixelFX impact could not be created:",error);}
+    if(enemy.hp<=0){
+      enemies=enemies.filter(item=>item!==enemy);
+      audio.sfx("enemy-down");
+    }else audio.sfx("hit");
+  }
+  if(!connected)ui.status.textContent="PIPE SWINGS THROUGH THE DARK";
+}
+function interact(){
+  if(!running||paused||gameEnded||!player)return;
+  const exitDistance=Math.hypot(player.x-461,player.y-137);
+  if(exitDistance<32){
+    if(objectiveProgress<3){
+      ui.status.textContent="STAIRWELL LOCKED · FIND ALL 3 SUPPLIES";
+      audio.sfx("menu");
+      return;
+    }
+    if(!doors[0].open){
+      doors[0].open=true;
+      audio.sfx("confirm");
+      ui.status.textContent="STAIRWELL UNLOCKED · MOVE THROUGH";
+      return;
+    }
+    return;
+  }
+  const nearby=pickups
+    .filter(item=>!item.taken&&Math.hypot(item.x-player.x,item.y-player.y)<17)
+    .sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y))[0];
+  if(nearby){
+    nearby.taken=true;
+    if(nearby.type==="med"){
+      medkits++;
+      ui.status.textContent="FIRST AID KIT COLLECTED";
+    }else{
+      objectiveProgress=Math.min(3,objectiveProgress+1);
+      ui.status.textContent="SUPPLIES SECURED · "+objectiveProgress+"/3";
+    }
+    audio.sfx("pickup");
+    spawnBurst(nearby.x,nearby.y,"#b8a786",6);
+    updateUI();
+    return;
+  }
+  if(player.hp<100&&medkits>0){
+    medkits--;
+    player.hp=Math.min(100,player.hp+42);
+    audio.sfx("heal");
+    spawnBurst(player.x,player.y,"#b5a17c",9);
+    ui.status.textContent="WOUNDS TREATED";
+    updateUI();
+    return;
+  }
+  ui.status.textContent=player.hp>=100?"HEALTH IS ALREADY FULL":"NOTHING TO USE HERE";
+}
 function updateUI(){
   ui.hp.style.width=player.hp+"%";ui.hpLabel.textContent=Math.ceil(player.hp)+" / 100";
   ui.stamina.style.width=player.stamina+"%";ui.staminaLabel.textContent=Math.ceil(player.stamina)+" / 100";
@@ -324,6 +460,7 @@ function updateUI(){
   if(ui.posture)ui.posture.textContent=player.crouched?"CROUCHING":(keys.has("shift")&&player.stamina>0?"SPRINTING":"WALKING");
   if(ui.light)ui.light.textContent=player.flashlight?"FLASHLIGHT ON":"FLASHLIGHT OFF";
   if(ui.lightBar)ui.lightBar.style.width=player.lightBattery+"%";
+  if(ui.lightLabel)ui.lightLabel.textContent=Math.ceil(player.lightBattery)+"%";
   if(ui.touchMode)ui.touchMode.textContent=player.crouched?"STEALTH":(keys.has("shift")&&player.stamina>0?"RUN":"WALK");
   if(ui.touchCrouch)ui.touchCrouch.classList.toggle("is-active",player.crouched);
   if(ui.touchLight)ui.touchLight.classList.toggle("is-active",player.flashlight);
@@ -354,7 +491,7 @@ function update(dt){
   ambientRoarTimer-=dt;
   if(moving){
     const speed=sprinting?116:(player.crouched?34:65);
-    player.x+=dx*speed*dt;player.y+=dy*speed*dt;
+    moveEntity(player,dx*speed*dt,dy*speed*dt,player.r);
     if(Math.abs(dx)>Math.abs(dy))player.faceX=Math.sign(dx),player.faceY=0;
     else player.faceY=Math.sign(dy),player.faceX=0;
     ui.status.textContent=sprinting?"RUNNING · MAKING NOISE":player.crouched?"CROUCHING · QUIET":"MOVING CAREFULLY";
@@ -363,7 +500,7 @@ function update(dt){
       footstepTimer=sprinting ? 0.22 : player.crouched ? 0.58 : 0.38;
     }
   }
-  player.x=clamp(player.x,15,445);player.y=clamp(player.y,26,244);
+  player.x=clamp(player.x,15,467);player.y=clamp(player.y,76,244);
   for(const e of enemies){
     e.hit=Math.max(0,e.hit-dt);
     const ex=player.x-e.x,ey=player.y-e.y,d=Math.hypot(ex,ey);
@@ -372,7 +509,7 @@ function update(dt){
     if(d<hearingRange)e.alertTimer=3.2;
     if(e.alertTimer>0){
       const speed=e.speed*(sprinting?1.18:1);
-      if(d>13){e.x+=ex/(d||1)*speed*dt;e.y+=ey/(d||1)*speed*dt;}
+      if(d>13)moveEntity(e,ex/(d||1)*speed*dt,ey/(d||1)*speed*dt,7);
       else if(player.invuln<=0){
         player.hp=Math.max(0,player.hp-9);player.invuln=.62;shake=3;
         spawnBurst(player.x,player.y,"#9b3c3c",5);audio.sfx("hurt");
@@ -386,6 +523,10 @@ function update(dt){
   for(const p of pickups)if(!p.taken&&Math.hypot(p.x-player.x,p.y-player.y)<13)ui.status.textContent="ITEM NEARBY · PRESS E";
   if(ambientRoarTimer<=0&&enemies.some(e=>Math.hypot(e.x-player.x,e.y-player.y)<150)){
     audio.sfx("monster");ambientRoarTimer=7+rnd(0,5);
+  }
+  if(!gameEnded&&doors[0]?.open&&player.x>464&&player.y>118&&player.y<156){
+    completeChapter();
+    return;
   }
   heartbeatTimer-=dt;
   if(player.hp<=32&&heartbeatTimer<=0){audio.sfx("heartbeat");heartbeatTimer=1.05;}
@@ -606,15 +747,24 @@ function finishCinematic(){
 }
 
 function frame(now){
-  const dt=Math.min((now-last)/1000||0,0.04);last=now;
-  if(cinematic){
-    cinematicTime+=dt;drawCinematic();
-    if(cinematicTime>6.9&&!cinematicGunPlayed){audio.sfx("gunfire");cinematicGunPlayed=true;}
-    if(cinematicTime>28){finishCinematic();}
-    else if(ui.caption){ui.caption.textContent=cinematicTime<10.5?"SEPTEMBER 2020 · UNKNOWN LOCATION":cinematicTime<19.5?"AUGUST 2020 · GREEN HOME":"ROOM 1410 · SEOUL";}
-  }
-  else {if(running&&!paused)update(dt);render();}
+  // Schedule first so a single unexpected runtime error never permanently kills the game loop.
   requestAnimationFrame(frame);
+  const dt=Math.min((now-last)/1000||0,0.04);last=now;
+  try{
+    if(cinematic){
+      cinematicTime+=dt;drawCinematic();
+      if(cinematicTime>6.9&&!cinematicGunPlayed){audio.sfx("gunfire");cinematicGunPlayed=true;}
+      if(cinematicTime>28){finishCinematic();}
+      else if(ui.caption){ui.caption.textContent=cinematicTime<10.5?"SEPTEMBER 2020 · UNKNOWN LOCATION":cinematicTime<19.5?"AUGUST 2020 · GREEN HOME":"ROOM 1410 · SEOUL";}
+    }else{
+      if(running&&!paused)update(dt);
+      render();
+    }
+  }catch(error){
+    console.error("Sweet Home game loop error:",error);
+    running=false;paused=true;
+    if(ui.status)ui.status.textContent="GAME PAUSED · CHECK CONSOLE";
+  }
 }
 document.querySelector("#start").addEventListener("click",()=>{
   audio.unlock();audio.sfx("confirm");reset();running=true;paused=false;
